@@ -390,7 +390,7 @@ function PullRequestFacts({ pullRequest }: { pullRequest: PullRequestSummary }) 
           </a>
           <div className="text-sm text-muted-foreground">
             {pullRequest.authorLogin}
-            {pullRequest.authorAssociation ? ` · ${pullRequest.authorAssociation}` : ""}
+            {pullRequest.authorAssociation ? ` - ${pullRequest.authorAssociation}` : ""}
           </div>
         </div>
 
