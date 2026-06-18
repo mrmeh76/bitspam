@@ -160,9 +160,18 @@ importers:
       '@bitspam/shared':
         specifier: workspace:*
         version: link:../shared
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
+      openai:
+        specifier: ^6.43.0
+        version: 6.43.0(zod@4.4.3)
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
 
   packages/db:
     dependencies:

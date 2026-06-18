@@ -126,9 +126,20 @@ export type AnalysisResult = {
   scoreBreakdown: ScoreBreakdown;
   suggestedContributorComment: string;
   maintainerRecommendation: string;
+  ai?: AISemanticResult;
 };
 
 export type AnalyzerCheck = {
   id: string;
   run: (context: PullRequestContext) => Promise<Finding[]>;
+};
+
+export type AISemanticResult = {
+  provider: "gemini" | "openai" | "test";
+  bodyMatchesDiff: boolean;
+  genericDescriptionRisk: "low" | "medium" | "high";
+  suspiciousClaims: string[];
+  suggestedProofQuestions: string[];
+  maintainerSummary: string;
+  confidence: number;
 };
