@@ -1,0 +1,18 @@
+<svg width="960" height="256" viewBox="0 0 960 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">BitSpam logo</title>
+  <desc id="desc">BitSpam wordmark with a shield and pull request signal mark.</desc>
+  <rect width="960" height="256" rx="40" fill="#071D2B"/>
+  <g transform="translate(32 24)">
+    <path d="M104 0L186 30V92C186 145.5 152.5 193.5 104 210C55.5 193.5 22 145.5 22 92V30L104 0Z" fill="#0D3447" stroke="#2F6E88" stroke-width="8"/>
+    <path d="M58 62C58 50.9543 66.9543 42 78 42C89.0457 42 98 50.9543 98 62C98 70.6484 92.5123 78.0131 84.8333 80.805V127.195C92.5123 129.987 98 137.352 98 146C98 157.046 89.0457 166 78 166C66.9543 166 58 157.046 58 146C58 137.352 63.4877 129.987 71.1667 127.195V80.805C63.4877 78.0131 58 70.6484 58 62Z" fill="#F6A11A"/>
+    <path d="M84 62H116C134.778 62 150 77.2223 150 96V127.195C157.512 129.987 163 137.352 163 146C163 157.046 154.046 166 143 166C131.954 166 123 157.046 123 146C123 137.352 128.488 129.987 136.167 127.195V96C136.167 84.8623 127.138 75.8333 116 75.8333H84V62Z" fill="#2F95FF"/>
+    <circle cx="78" cy="62" r="8" fill="#071D2B"/>
+    <circle cx="78" cy="146" r="8" fill="#071D2B"/>
+    <circle cx="143" cy="146" r="8" fill="#071D2B"/>
+    <path d="M136 46L155 65L196 24" stroke="#FFE15A" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="264" y="112" fill="#F8FBFF" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="800" letter-spacing="0">BitSpam</text>
+  <text x="268" y="154" fill="#9FB6C4" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500" letter-spacing="0">Maintainer attention firewall</text>
+  <path d="M270 184H684" stroke="#2F6E88" stroke-width="2"/>
+  <text x="268" y="218" fill="#FFE15A" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="0">PR signal, not review noise</text>
+</svg>

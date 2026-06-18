@@ -60,10 +60,7 @@ export default function Home() {
       <section className="border-b border-border">
         <div className="mx-auto grid min-h-[calc(100dvh-65px)] max-w-7xl content-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
           <div className="max-w-3xl space-y-7">
-            <Badge variant="secondary">
-              <Sparkles className="size-3" />
-              Maintainer attention firewall
-            </Badge>
+
             <div className="space-y-4">
               <h1 className="text-4xl font-semibold tracking-normal text-foreground sm:text-6xl">
                 Keep noisy pull requests out of your review queue.
