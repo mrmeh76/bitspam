@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@bitspam/shared": "workspace:*"
+    "@bitspam/shared": "workspace:*",
+    "yaml": "^2.9.0"
   }
 }
