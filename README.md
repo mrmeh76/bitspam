@@ -8,6 +8,7 @@ The product gives maintainers a fast triage layer:
 
 - Paste a public GitHub PR URL and get a saved analysis report.
 - Install the GitHub App on a repository and let BitSpam react to PR webhooks.
+- [Install BitSpam](https://github.com/apps/bitspam)
 - Queue longer analysis work through BullMQ and a separate worker.
 - Store analysis history, findings, repository policy, and proof-of-work
   comments in Postgres.
@@ -21,6 +22,8 @@ evidence, and proof of work.
 
 BitSpam is registered as a public GitHub App so repository owners can
 install it on repositories they control.
+
+- [BitSpam](https://github.com/apps/bitspam)
 
 ## Logo
 
