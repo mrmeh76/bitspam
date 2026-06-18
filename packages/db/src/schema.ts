@@ -23,6 +23,8 @@ const timestamps = {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 };
 
+export type AnalysisRunStatus = "queued" | "processing" | "completed" | "failed";
+
 export const githubInstallations = pgTable(
   "github_installations",
   {
@@ -88,7 +90,7 @@ export const analysisRuns = pgTable(
     pullRequestId: uuid("pull_request_id")
       .notNull()
       .references(() => pullRequests.id, { onDelete: "cascade" }),
-    status: text("status").notNull(),
+    status: text("status").$type<AnalysisRunStatus>().notNull(),
     score: integer("score"),
     verdict: text("verdict").$type<Verdict>(),
     summary: text("summary"),

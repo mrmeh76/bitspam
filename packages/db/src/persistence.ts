@@ -8,10 +8,25 @@ import {
   findings,
   pullRequests,
   repositories,
-  repoPolicies
+  repoPolicies,
+  type AnalysisRunStatus
 } from "./schema.js";
 
+export type CreateQueuedAnalysisRunInput = {
+  owner: string;
+  repo: string;
+  number: number;
+  url: string;
+};
+
 export type SaveAnalysisRunInput = {
+  context: PullRequestContext;
+  result: AnalysisResult;
+  analysisRunId?: string;
+};
+
+export type CompleteAnalysisRunInput = {
+  analysisRunId: string;
   context: PullRequestContext;
   result: AnalysisResult;
 };
@@ -24,11 +39,13 @@ export type SavedAnalysisRun = {
 
 export type AnalysisHistoryItem = {
   id: string;
+  status: AnalysisRunStatus;
   createdAt: Date;
   completedAt: Date | null;
   score: number | null;
   verdict: AnalysisResult["verdict"] | null;
   summary: string | null;
+  error: string | null;
   findingsCount: number;
   pullRequest: {
     number: number;
@@ -45,6 +62,7 @@ export type AnalysisHistoryItem = {
 };
 
 export type AnalysisRunDetail = AnalysisHistoryItem & {
+  rawInput: Record<string, unknown> | null;
   scoreBreakdown: AnalysisResult["scoreBreakdown"] | null;
   suggestedContributorComment: string | null;
   maintainerRecommendation: string | null;
@@ -52,10 +70,57 @@ export type AnalysisRunDetail = AnalysisHistoryItem & {
   findings: AnalysisResult["findings"];
 };
 
+export async function createQueuedAnalysisRun(
+  db: BitSpamDb,
+  input: CreateQueuedAnalysisRunInput
+): Promise<SavedAnalysisRun> {
+  const repository = await upsertRepository(db, {
+    owner: input.owner,
+    repo: input.repo
+  });
+  const pullRequest = await upsertQueuedPullRequest(db, repository.id, {
+    owner: input.owner,
+    repo: input.repo,
+    number: input.number,
+    title: `Pending analysis for #${input.number}`,
+    authorLogin: "unknown",
+    headSha: "",
+    baseSha: ""
+  });
+  const [analysisRun] = await db
+    .insert(analysisRuns)
+    .values({
+      pullRequestId: pullRequest.id,
+      status: "queued",
+      summary: "Analysis queued.",
+      rawInput: {
+        url: input.url,
+        owner: input.owner,
+        repo: input.repo,
+        number: input.number
+      }
+    })
+    .returning({ id: analysisRuns.id });
+
+  if (!analysisRun) {
+    throw new Error("Failed to create queued analysis run.");
+  }
+
+  return {
+    id: analysisRun.id,
+    repositoryId: repository.id,
+    pullRequestId: pullRequest.id
+  };
+}
+
 export async function saveAnalysisRun(
   db: BitSpamDb,
-  { context, result }: SaveAnalysisRunInput
+  { analysisRunId, context, result }: SaveAnalysisRunInput
 ): Promise<SavedAnalysisRun> {
+  if (analysisRunId) {
+    return completeAnalysisRun(db, { analysisRunId, context, result });
+  }
+
   const repository = await upsertRepository(db, context);
   const pullRequest = await upsertPullRequest(db, repository.id, context);
   await upsertRepoPolicy(db, repository.id, context);
@@ -81,19 +146,80 @@ export async function saveAnalysisRun(
   }
 
   if (result.findings.length > 0) {
-    await db.insert(findings).values(
-      result.findings.map((finding) => ({
-        analysisRunId: analysisRun.id,
-        checkId: finding.checkId,
-        title: finding.title,
-        severity: finding.severity,
-        category: finding.category,
-        message: finding.message,
-        evidence: finding.evidence,
-        recommendation: finding.recommendation,
-        scoreImpact: finding.scoreImpact
-      }))
-    );
+    await insertFindings(db, analysisRun.id, result);
+  }
+
+  return {
+    id: analysisRun.id,
+    repositoryId: repository.id,
+    pullRequestId: pullRequest.id
+  };
+}
+
+export async function markAnalysisRunProcessing(
+  db: BitSpamDb,
+  analysisRunId: string
+): Promise<void> {
+  await db
+    .update(analysisRuns)
+    .set({
+      status: "processing",
+      summary: "Analysis is running."
+    })
+    .where(eq(analysisRuns.id, analysisRunId));
+}
+
+export async function failAnalysisRun(
+  db: BitSpamDb,
+  analysisRunId: string,
+  error: string
+): Promise<void> {
+  await db
+    .update(analysisRuns)
+    .set({
+      status: "failed",
+      summary: "Analysis failed.",
+      completedAt: new Date(),
+      error
+    })
+    .where(eq(analysisRuns.id, analysisRunId));
+}
+
+export async function completeAnalysisRun(
+  db: BitSpamDb,
+  { analysisRunId, context, result }: CompleteAnalysisRunInput
+): Promise<SavedAnalysisRun> {
+  const repository = await upsertRepository(db, context);
+  const pullRequest = await upsertPullRequest(db, repository.id, context);
+  await upsertRepoPolicy(db, repository.id, context);
+
+  const [analysisRun] = await db
+    .update(analysisRuns)
+    .set({
+      pullRequestId: pullRequest.id,
+      status: "completed",
+      score: result.score,
+      verdict: result.verdict,
+      summary: result.summary,
+      rawInput: toJsonObject(context),
+      scoreBreakdown: result.scoreBreakdown,
+      suggestedContributorComment: result.suggestedContributorComment,
+      maintainerRecommendation: result.maintainerRecommendation,
+      aiResult: result.ai ?? null,
+      completedAt: new Date(),
+      error: null
+    })
+    .where(eq(analysisRuns.id, analysisRunId))
+    .returning({ id: analysisRuns.id });
+
+  if (!analysisRun) {
+    throw new Error("Failed to complete analysis run.");
+  }
+
+  await db.delete(findings).where(eq(findings.analysisRunId, analysisRun.id));
+
+  if (result.findings.length > 0) {
+    await insertFindings(db, analysisRun.id, result);
   }
 
   return {
@@ -155,6 +281,7 @@ export async function getAnalysisRunDetail(
   return {
     ...mapHistoryRow(row),
     findingsCount: savedFindings.length,
+    rawInput: row.analysisRun.rawInput ?? null,
     scoreBreakdown: row.analysisRun.scoreBreakdown ?? null,
     suggestedContributorComment: row.analysisRun.suggestedContributorComment ?? null,
     maintainerRecommendation: row.analysisRun.maintainerRecommendation ?? null,
@@ -173,7 +300,30 @@ export async function getAnalysisRunDetail(
   };
 }
 
-async function upsertRepository(db: BitSpamDb, context: PullRequestContext) {
+async function insertFindings(
+  db: BitSpamDb,
+  analysisRunId: string,
+  result: AnalysisResult
+): Promise<void> {
+  await db.insert(findings).values(
+    result.findings.map((finding) => ({
+      analysisRunId,
+      checkId: finding.checkId,
+      title: finding.title,
+      severity: finding.severity,
+      category: finding.category,
+      message: finding.message,
+      evidence: finding.evidence,
+      recommendation: finding.recommendation,
+      scoreImpact: finding.scoreImpact
+    }))
+  );
+}
+
+async function upsertRepository(
+  db: BitSpamDb,
+  context: Pick<PullRequestContext, "owner" | "repo">
+) {
   const [repository] = await db
     .insert(repositories)
     .values({
@@ -202,7 +352,10 @@ async function upsertRepository(db: BitSpamDb, context: PullRequestContext) {
 async function upsertPullRequest(
   db: BitSpamDb,
   repositoryId: string,
-  context: PullRequestContext
+  context: Pick<
+    PullRequestContext,
+    "owner" | "repo" | "number" | "title" | "authorLogin" | "headSha" | "baseSha"
+  >
 ) {
   const [pullRequest] = await db
     .insert(pullRequests)
@@ -223,6 +376,41 @@ async function upsertPullRequest(
         authorLogin: context.authorLogin,
         headSha: context.headSha,
         baseSha: context.baseSha,
+        updatedAt: new Date()
+      }
+    })
+    .returning({ id: pullRequests.id });
+
+  if (!pullRequest) {
+    throw new Error("Failed to save pull request.");
+  }
+
+  return pullRequest;
+}
+
+async function upsertQueuedPullRequest(
+  db: BitSpamDb,
+  repositoryId: string,
+  context: Pick<
+    PullRequestContext,
+    "owner" | "repo" | "number" | "title" | "authorLogin" | "headSha" | "baseSha"
+  >
+) {
+  const [pullRequest] = await db
+    .insert(pullRequests)
+    .values({
+      githubId: `${context.owner}/${context.repo}#${context.number}`,
+      repositoryId,
+      number: context.number,
+      title: context.title,
+      authorLogin: context.authorLogin,
+      state: "queued",
+      headSha: context.headSha,
+      baseSha: context.baseSha
+    })
+    .onConflictDoUpdate({
+      target: [pullRequests.repositoryId, pullRequests.number],
+      set: {
         updatedAt: new Date()
       }
     })
@@ -274,11 +462,13 @@ function mapHistoryRow(row: {
 }): Omit<AnalysisHistoryItem, "findingsCount"> {
   return {
     id: row.analysisRun.id,
+    status: row.analysisRun.status,
     createdAt: row.analysisRun.startedAt,
     completedAt: row.analysisRun.completedAt,
     score: row.analysisRun.score,
     verdict: row.analysisRun.verdict ?? null,
     summary: row.analysisRun.summary ?? null,
+    error: row.analysisRun.error ?? null,
     pullRequest: {
       number: row.pullRequest.number,
       title: row.pullRequest.title,

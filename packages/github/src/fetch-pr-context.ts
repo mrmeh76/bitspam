@@ -22,7 +22,7 @@ export type ParsedPullRequestLocation = {
 };
 
 export type FetchPullRequestContextOptions = {
-  githubToken?: string;
+  githubToken?: string | undefined;
 };
 
 export async function fetchPullRequestContextFromUrl(
