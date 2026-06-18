@@ -39,6 +39,21 @@ export const intentQualityCheck: AnalyzerCheck = {
       );
     }
 
+    if (!/\b(summary|description|what|why|motivation|testing|tests?|validation|screenshots?)\b/i.test(body)) {
+      findings.push(
+        createFinding({
+          checkId: "intent-quality",
+          title: "Description lacks review sections",
+          severity: "low",
+          category: "intent",
+          message: "The PR body does not appear to include common review sections such as summary, motivation, or testing.",
+          evidence: ["No common PR-section headings or validation language were found."],
+          recommendation: "Add short Summary and Testing sections so maintainers can scan the PR quickly.",
+          scoreImpact: 5
+        })
+      );
+    }
+
     if (!/\b(why|because|fix|problem|issue|motivation|context|before|after)\b/i.test(combinedText)) {
       findings.push(
         createFinding({

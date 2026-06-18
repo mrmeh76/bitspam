@@ -1,6 +1,11 @@
 import type { AnalyzerCheck, Finding } from "@bitspam/shared";
 
-import { createFinding, totalChangedLines, touchedDirectories } from "./helpers.js";
+import {
+  createFinding,
+  matchesAnyPattern,
+  totalChangedLines,
+  touchedDirectories
+} from "./helpers.js";
 
 export const diffScopeCheck: AnalyzerCheck = {
   id: "diff-scope",
@@ -38,6 +43,21 @@ export const diffScopeCheck: AnalyzerCheck = {
           scoreImpact: 8
         })
       );
+    }
+
+    const lowRiskFiles = context.changedFiles.filter((file) =>
+      matchesAnyPattern(file.filename, context.policy.lowRiskPaths)
+    );
+    const lowRiskOnly =
+      context.changedFiles.length > 0 && lowRiskFiles.length === context.changedFiles.length;
+
+    if (lowRiskOnly && findings.length > 0) {
+      return findings.map((finding) => ({
+        ...finding,
+        severity: finding.severity === "high" ? "medium" : finding.severity,
+        scoreImpact: Math.max(3, Math.floor(finding.scoreImpact / 2)),
+        evidence: [...finding.evidence, "All changed files match low-risk policy paths."]
+      }));
     }
 
     const hasLockfile = context.changedFiles.some((file) =>

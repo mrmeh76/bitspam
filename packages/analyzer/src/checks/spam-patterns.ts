@@ -1,6 +1,6 @@
 import type { AnalyzerCheck, Finding } from "@bitspam/shared";
 
-import { createFinding, normalizeText } from "./helpers.js";
+import { countPatchMatches, createFinding, normalizeText } from "./helpers.js";
 
 const genericPhrases = [
   "fix bug",
@@ -48,6 +48,22 @@ export const spamPatternsCheck: AnalyzerCheck = {
           evidence: [`Body length: ${context.body.trim().length} characters`],
           recommendation: "Ask the contributor to explain intent, scope, and validation.",
           scoreImpact: 12
+        })
+      );
+    }
+
+    const whitespaceOnlySignals = countPatchMatches(context, /^\+\s*$|^-\s*$/gm);
+    if (whitespaceOnlySignals > 20 && context.body.trim().length < 160) {
+      findings.push(
+        createFinding({
+          checkId: "spam-patterns",
+          title: "Many low-signal whitespace-only diff lines",
+          severity: "low",
+          category: "spam",
+          message: "The diff contains many blank added or removed lines without enough explanation.",
+          evidence: [`Whitespace-only diff signals: ${whitespaceOnlySignals}`],
+          recommendation: "Ask the contributor to explain the meaningful behavior or documentation change.",
+          scoreImpact: 6
         })
       );
     }

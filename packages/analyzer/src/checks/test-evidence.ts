@@ -40,6 +40,10 @@ export const testEvidenceCheck: AnalyzerCheck = {
       );
     }
 
+    if (bodyHasTestEvidence && context.checkRuns.some((check) => check.conclusion === "success")) {
+      return findings.filter((finding) => finding.severity !== "info");
+    }
+
     return findings;
   }
 };

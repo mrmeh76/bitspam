@@ -1,6 +1,6 @@
 import type { AnalyzerCheck, Finding } from "@bitspam/shared";
 
-import { createFinding } from "./helpers.js";
+import { createFinding, matchesAnyPattern } from "./helpers.js";
 
 const riskyPathPattern =
   /(^|\/)(\.github\/workflows|auth|security|crypto|wallet|consensus|permissions?|secrets?|migrations?|package\.json|pnpm-lock\.yaml|yarn\.lock|package-lock\.json)(\/|$)/i;
@@ -9,7 +9,11 @@ export const riskyPathsCheck: AnalyzerCheck = {
   id: "risky-paths",
   async run(context) {
     const riskyFiles = context.changedFiles
-      .filter((file) => riskyPathPattern.test(file.filename))
+      .filter(
+        (file) =>
+          riskyPathPattern.test(file.filename) ||
+          matchesAnyPattern(file.filename, context.policy.protectedPaths)
+      )
       .map((file) => file.filename);
 
     if (riskyFiles.length === 0) {
