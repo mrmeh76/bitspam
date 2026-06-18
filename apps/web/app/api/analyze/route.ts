@@ -1,4 +1,4 @@
-import { analyzePullRequest } from "@bitspam/analyzer";
+import { analyzePullRequest, createAIProviderFromEnv } from "@bitspam/analyzer";
 import { fetchPullRequestContextFromUrl } from "@bitspam/github";
 import type { PullRequestContext } from "@bitspam/shared";
 import { NextResponse } from "next/server";
@@ -26,7 +26,15 @@ export async function POST(request: Request) {
     const context = await fetchPullRequestContextFromUrl(body.url.trim(), {
       githubToken: process.env.GITHUB_TOKEN
     });
-    const result = await analyzePullRequest(context);
+    const result = await analyzePullRequest(context, {
+      aiProvider: createAIProviderFromEnv({
+        AI_PROVIDER: process.env.AI_PROVIDER,
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+        GEMINI_MODEL: process.env.GEMINI_MODEL,
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        OPENAI_MODEL: process.env.OPENAI_MODEL
+      })
+    });
 
     return NextResponse.json({
       result,
