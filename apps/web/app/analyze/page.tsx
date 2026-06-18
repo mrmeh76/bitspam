@@ -258,7 +258,7 @@ export default function AnalyzePage() {
                     {isAnalysisRunning ? (
                       <>
                         <Loader2 className="animate-spin" />
-                        Queued
+                        Analyzing
                       </>
                     ) : (
                       <>
@@ -281,6 +281,8 @@ export default function AnalyzePage() {
 
             {analysis ? (
               <PullRequestFacts pullRequest={analysis.pullRequest} />
+            ) : isLoading ? (
+              <InlineAnalysisProgress />
             ) : pendingAnalysis ? (
               <PendingAnalysis analysis={pendingAnalysis} />
             ) : (
@@ -291,6 +293,8 @@ export default function AnalyzePage() {
           <div className="space-y-6">
             {analysis ? (
               <AnalysisReport analysis={analysis} />
+            ) : isLoading ? (
+              <InlineReportProgress />
             ) : pendingAnalysis ? (
               <PendingReport analysis={pendingAnalysis} />
             ) : (
@@ -323,6 +327,57 @@ function EmptyState() {
         <div>No contributor code is executed.</div>
       </CardContent>
     </Card>
+  );
+}
+
+function InlineAnalysisProgress() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Loader2 className="size-4 animate-spin" />
+          Analysis running
+        </CardTitle>
+        <CardDescription>BitSpam is analyzing this pull request in the current request.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 text-sm">
+        <LoadingStep label="Parsing GitHub pull request URL" />
+        <LoadingStep label="Fetching files, commits, checks, and repository guidance" />
+        <LoadingStep label="Running deterministic quality checks" />
+        <LoadingStep label="Adding structured AI reasoning when configured" />
+        <LoadingStep label="Saving the report to history" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function InlineReportProgress() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Report</CardTitle>
+        <CardDescription>Preparing the maintainer-ready analysis.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex min-h-72 flex-col items-center justify-center gap-4 rounded-lg border border-dashed text-center text-sm text-muted-foreground">
+        <Loader2 className="size-6 animate-spin text-foreground" />
+        <div className="max-w-sm">
+          This can take a moment for larger pull requests because BitSpam fetches
+          live GitHub metadata and validates the result before showing it.
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LoadingStep({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+      <span className="relative flex size-2.5">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
+        <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
+      </span>
+      <span className="text-muted-foreground">{label}</span>
+    </div>
   );
 }
 
