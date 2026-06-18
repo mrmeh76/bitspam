@@ -1,12 +1,19 @@
 import {
   getAnalysisRunDetail,
+  listTrackedRepositories,
   listRecentAnalysisRuns,
   type AnalysisHistoryItem,
-  type AnalysisRunDetail
+  type AnalysisRunDetail,
+  type TrackedRepository
 } from "@bitspam/db";
 import type { ChangedFile, ContributorStats, PullRequestContext } from "@bitspam/shared";
 
+import type { AuthSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import {
+  listGitHubUserAppRepositories,
+  type GitHubUserRepository
+} from "@/lib/github-user";
 
 export type DashboardRepository = {
   owner: string;
@@ -17,7 +24,10 @@ export type DashboardRepository = {
   pullRequests: number;
   averageScore: number | null;
   highRiskRuns: number;
-  latestRun: AnalysisHistoryItem;
+  isPrivate: boolean;
+  source: "installed" | "analyzed";
+  installationAccountLogin: string | null;
+  latestRun: AnalysisHistoryItem | null;
 };
 
 export type DashboardData = {
@@ -47,9 +57,9 @@ export type PullRequestDashboardData = {
   changedFiles: ChangedFile[];
 };
 
-export async function loadDashboardData(): Promise<DashboardData> {
+export async function loadDashboardData(session?: AuthSession): Promise<DashboardData> {
   const recent = await listRecentAnalysisRuns(getDb(), 200);
-  const repositories = buildRepositories(recent);
+  const repositories = await buildRepositories(recent, session);
   const queue = recent.filter((item) => item.status === "queued" || item.status === "processing");
   const pullRequests = new Set(
     recent.map((item) => `${item.repository.fullName}#${item.pullRequest.number}`)
@@ -85,7 +95,7 @@ export async function loadRepositoryDashboardData(
     return undefined;
   }
 
-  const [repository] = buildRepositories(history);
+  const [repository] = await buildRepositories(history);
 
   if (!repository) {
     return undefined;
@@ -134,7 +144,10 @@ export async function loadPullRequestDashboardData(
   };
 }
 
-function buildRepositories(items: AnalysisHistoryItem[]): DashboardRepository[] {
+async function buildRepositories(
+  items: AnalysisHistoryItem[],
+  session?: AuthSession
+): Promise<DashboardRepository[]> {
   const groups = new Map<string, AnalysisHistoryItem[]>();
 
   for (const item of items) {
@@ -143,7 +156,7 @@ function buildRepositories(items: AnalysisHistoryItem[]): DashboardRepository[] 
     groups.set(item.repository.fullName, group);
   }
 
-  return [...groups.values()]
+  const analyzed = [...groups.values()]
     .map((runs) => {
       const latestRun = runs[0]!;
       const scores = runs
@@ -162,10 +175,104 @@ function buildRepositories(items: AnalysisHistoryItem[]): DashboardRepository[] 
         pullRequests: pulls.size,
         averageScore: average(scores),
         highRiskRuns: runs.filter(isHighRisk).length,
+        isPrivate: false,
+        source: "analyzed" as const,
+        installationAccountLogin: null,
         latestRun
       };
     })
     .sort((a, b) => b.latestRun.createdAt.getTime() - a.latestRun.createdAt.getTime());
+
+  const installed = session ? await listInstalledRepositories(session) : [];
+
+  return mergeRepositories(installed, analyzed);
+}
+
+async function listInstalledRepositories(
+  session: AuthSession
+): Promise<DashboardRepository[]> {
+  if (session.accessToken) {
+    try {
+      return repositoriesFromGitHub(await listGitHubUserAppRepositories(session.accessToken));
+    } catch {
+      // Fall back to webhook-saved repositories below.
+    }
+  }
+
+  return repositoriesFromTracked(await listTrackedRepositories(getDb(), 200));
+}
+
+function repositoriesFromGitHub(repositories: GitHubUserRepository[]): DashboardRepository[] {
+  return repositories.map((repository) => emptyRepository({
+    owner: repository.owner,
+    repo: repository.name,
+    fullName: repository.fullName,
+    isPrivate: repository.isPrivate,
+    installationAccountLogin: repository.installationAccountLogin
+  }));
+}
+
+function repositoriesFromTracked(repositories: TrackedRepository[]): DashboardRepository[] {
+  return repositories.map((repository) => emptyRepository({
+    owner: repository.owner,
+    repo: repository.name,
+    fullName: repository.fullName,
+    isPrivate: repository.isPrivate,
+    installationAccountLogin: repository.installation?.accountLogin ?? null
+  }));
+}
+
+function emptyRepository(input: {
+  owner: string;
+  repo: string;
+  fullName: string;
+  isPrivate: boolean;
+  installationAccountLogin: string | null;
+}): DashboardRepository {
+  return {
+    ...input,
+    runs: 0,
+    activeRuns: 0,
+    pullRequests: 0,
+    averageScore: null,
+    highRiskRuns: 0,
+    source: "installed",
+    latestRun: null
+  };
+}
+
+function mergeRepositories(
+  installed: DashboardRepository[],
+  analyzed: DashboardRepository[]
+): DashboardRepository[] {
+  const merged = new Map<string, DashboardRepository>();
+
+  for (const repository of installed) {
+    merged.set(repository.fullName.toLowerCase(), repository);
+  }
+
+  for (const repository of analyzed) {
+    const key = repository.fullName.toLowerCase();
+    const existing = merged.get(key);
+
+    merged.set(key, {
+      ...repository,
+      isPrivate: existing?.isPrivate ?? repository.isPrivate,
+      source: existing ? "installed" : "analyzed",
+      installationAccountLogin: existing?.installationAccountLogin ?? null
+    });
+  }
+
+  return [...merged.values()].sort((a, b) => {
+    const aTime = a.latestRun?.createdAt.getTime() ?? 0;
+    const bTime = b.latestRun?.createdAt.getTime() ?? 0;
+
+    if (aTime !== bTime) {
+      return bTime - aTime;
+    }
+
+    return a.fullName.localeCompare(b.fullName);
+  });
 }
 
 function latestRunsByPullRequest(items: AnalysisHistoryItem[]): AnalysisHistoryItem[] {

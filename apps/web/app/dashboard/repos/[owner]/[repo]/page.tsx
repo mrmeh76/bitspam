@@ -173,7 +173,7 @@ function PullRequestTable({
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="max-w-[520px] whitespace-normal">
+                  <TableCell className="max-w- whitespace-normal">
                     <Link
                       className="font-medium hover:underline"
                       href={`/dashboard/repos/${owner}/${repo}/pulls/${item.pullRequest.number}`}
@@ -228,14 +228,20 @@ function RepoSummary({ data }: { data: RepositoryDashboardData }) {
         </div>
         <div className="rounded-lg border border-border bg-background/35 p-3">
           <div className="text-sm font-medium">Latest run</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            #{latest.pullRequest.number} saved {formatDate(latest.createdAt)}
-          </div>
+          {latest ? (
+            <div className="mt-1 text-sm text-muted-foreground">
+              #{latest.pullRequest.number} saved {formatDate(latest.createdAt)}
+            </div>
+          ) : (
+            <div className="mt-1 text-sm text-muted-foreground">
+              No pull requests have been analyzed yet.
+            </div>
+          )}
           <Button
             className="mt-3"
             render={
               <a
-                href={`https://github.com/${latest.repository.fullName}`}
+                href={`https://github.com/${data.repository.fullName}`}
                 rel="noreferrer"
                 target="_blank"
               />

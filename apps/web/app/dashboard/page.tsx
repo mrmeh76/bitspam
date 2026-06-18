@@ -2,9 +2,12 @@ import {
   AlertCircle,
   ArrowRight,
   BarChart3,
+  CheckCircle2,
   Clock3,
   ExternalLink,
   GitPullRequest,
+  LockKeyhole,
+  PlugZap,
   ShieldAlert,
   ShieldCheck
 } from "lucide-react";
@@ -39,9 +42,15 @@ import { loadDashboardData, type DashboardData, type DashboardRepository } from 
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const session = await requireAuth("/dashboard");
-  const data = await loadDashboardSafely();
+type DashboardPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const params = await searchParams;
+  const session = await requireAuth(dashboardNextPath(params));
+  const data = await loadDashboardSafely(session);
+  const notice = installNotice(params);
 
   return (
     <DashboardShell
@@ -57,6 +66,8 @@ export default async function DashboardPage() {
         </Alert>
       ) : (
         <div className="grid gap-6">
+          {notice ? <InstallNotice notice={notice} /> : null}
+          <InstallGitHubAppCard repositoryCount={data.repositories.length} />
           <StatsGrid data={data} />
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
             <PullRequestQueue items={data.queue.length > 0 ? data.queue : data.recent} />
@@ -69,9 +80,11 @@ export default async function DashboardPage() {
   );
 }
 
-async function loadDashboardSafely(): Promise<DashboardData | { error: string }> {
+async function loadDashboardSafely(
+  session: Awaited<ReturnType<typeof requireAuth>>
+): Promise<DashboardData | { error: string }> {
   try {
-    return await loadDashboardData();
+    return await loadDashboardData(session);
   } catch (error) {
     return {
       error:
@@ -80,6 +93,55 @@ async function loadDashboardSafely(): Promise<DashboardData | { error: string }>
           : "BitSpam could not load dashboard data."
     };
   }
+}
+
+function InstallNotice({
+  notice
+}: {
+  notice: {
+    title: string;
+    description: string;
+  };
+}) {
+  return (
+    <Alert>
+      <CheckCircle2 />
+      <AlertTitle>{notice.title}</AlertTitle>
+      <AlertDescription>{notice.description}</AlertDescription>
+    </Alert>
+  );
+}
+
+function InstallGitHubAppCard({ repositoryCount }: { repositoryCount: number }) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <PlugZap className="size-5" />
+          </span>
+          <div>
+            <div className="font-semibold">GitHub App connection</div>
+            <div className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              {repositoryCount === 0
+                ? "Install BitSpam on selected repositories to enable automatic PR checks and private-repo analysis."
+                : "Manage which repositories BitSpam can analyze, then open or synchronize PRs to populate the queue."}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button render={<Link href="/api/github/install" />} variant="outline">
+            <PlugZap />
+            Install or manage repos
+          </Button>
+          <Button render={<Link href="/analyze" />}>
+            <GitPullRequest />
+            Analyze public PR
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function StatsGrid({ data }: { data: DashboardData }) {
@@ -188,33 +250,71 @@ function RepositoryList({ repositories }: { repositories: DashboardRepository[] 
       </CardHeader>
       <CardContent className="grid gap-2">
         {repositories.length === 0 ? (
-          <EmptyState actionHref="/analyze" actionLabel="Start with a URL" />
+          <EmptyState actionHref="/api/github/install" actionLabel="Install GitHub App" />
         ) : (
           repositories.map((repository) => (
-            <Link
-              className="rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
-              href={`/dashboard/repos/${repository.owner}/${repository.repo}`}
-              key={repository.fullName}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{repository.fullName}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {repository.pullRequests} PRs, {repository.runs} runs
-                  </div>
-                </div>
-                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                <MiniMetric label="Avg" value={repository.averageScore ?? "-"} />
-                <MiniMetric label="Queue" value={repository.activeRuns} />
-                <MiniMetric label="Risk" value={repository.highRiskRuns} />
-              </div>
-            </Link>
+            <RepositoryCard key={repository.fullName} repository={repository} />
           ))
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function RepositoryCard({ repository }: { repository: DashboardRepository }) {
+  const hasAnalysis = repository.runs > 0;
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate font-medium">{repository.fullName}</span>
+            {repository.isPrivate ? (
+              <Badge variant="outline">
+                <LockKeyhole />
+                private
+              </Badge>
+            ) : null}
+            <Badge variant={repository.source === "installed" ? "secondary" : "outline"}>
+              {repository.source === "installed" ? "installed" : "analyzed"}
+            </Badge>
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            {hasAnalysis
+              ? `${repository.pullRequests} PRs, ${repository.runs} runs`
+              : "Ready for automatic PR checks."}
+          </div>
+        </div>
+        <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+        <MiniMetric label="Avg" value={repository.averageScore ?? "-"} />
+        <MiniMetric label="Queue" value={repository.activeRuns} />
+        <MiniMetric label="Risk" value={repository.highRiskRuns} />
+      </div>
+    </>
+  );
+
+  if (!hasAnalysis) {
+    return (
+      <a
+        className="block rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
+        href={`https://github.com/${repository.fullName}`}
+        rel="noreferrer"
+        target="_blank"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      className="rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
+      href={`/dashboard/repos/${repository.owner}/${repository.repo}`}
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -346,4 +446,47 @@ function statusVariant(status: AnalysisHistoryItem["status"]): "default" | "seco
   }
 
   return "outline";
+}
+
+function dashboardNextPath(
+  params: Record<string, string | string[] | undefined> | undefined
+): string {
+  const query = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (typeof value === "string") {
+      query.set(key, value);
+    }
+  }
+
+  const search = query.toString();
+
+  return search ? `/dashboard?${search}` : "/dashboard";
+}
+
+function installNotice(
+  params: Record<string, string | string[] | undefined> | undefined
+): { title: string; description: string } | null {
+  const setupAction = firstParam(params?.setup_action);
+  const installationId = firstParam(params?.installation_id);
+
+  if (!setupAction && !installationId) {
+    return null;
+  }
+
+  if (setupAction === "update") {
+    return {
+      title: "Repository access updated",
+      description: "GitHub sent you back to BitSpam after changing repository access. New PR activity will appear here after GitHub delivers webhook events."
+    };
+  }
+
+  return {
+    title: "GitHub App installed",
+    description: "BitSpam is connected. Open or synchronize a pull request in an installed repository to trigger automatic analysis."
+  };
+}
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }

@@ -4,6 +4,7 @@ import {
   History,
   LayoutDashboard,
   LogOut,
+  PlugZap,
   Search,
   ShieldCheck,
   UserRound
@@ -41,6 +42,7 @@ export function DashboardShell({
 
           <nav className="mt-6 grid gap-1">
             <NavLink href="/dashboard" icon={<LayoutDashboard />}>Dashboard</NavLink>
+            <NavLink href="/api/github/install" icon={<PlugZap />}>Install app</NavLink>
             <NavLink href="/analyze" icon={<Search />}>Analyze URL</NavLink>
             <NavLink href="/history" icon={<History />}>History</NavLink>
           </nav>
@@ -85,6 +87,10 @@ export function DashboardShell({
                 <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{subtitle}</p>
               </div>
               <div className="flex gap-2">
+                <Button render={<Link href="/api/github/install" />} variant="outline">
+                  <PlugZap />
+                  Install app
+                </Button>
                 <Button render={<Link href="/analyze" />} variant="outline">
                   <Search />
                   Analyze URL

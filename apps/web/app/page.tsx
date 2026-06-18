@@ -5,6 +5,7 @@ import {
   GitPullRequest,
   History,
   LockKeyhole,
+  PlugZap,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -77,6 +78,10 @@ export default function Home() {
               <Button render={<Link href="/dashboard" />} size="lg" variant="outline">
                 Open maintainer console
                 <BarChart3 />
+              </Button>
+              <Button render={<Link href="/api/github/install" />} size="lg" variant="outline">
+                Install GitHub App
+                <PlugZap />
               </Button>
             </div>
           </div>
