@@ -1,7 +1,10 @@
 import { analyzePullRequest, createAIProviderFromEnv } from "@bitspam/analyzer";
+import { saveAnalysisRun } from "@bitspam/db";
 import { fetchPullRequestContextFromUrl } from "@bitspam/github";
 import type { PullRequestContext } from "@bitspam/shared";
 import { NextResponse } from "next/server";
+
+import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -35,8 +38,10 @@ export async function POST(request: Request) {
         OPENAI_MODEL: process.env.OPENAI_MODEL
       })
     });
+    const saved = await saveAnalysisRun(getDb(), { context, result });
 
     return NextResponse.json({
+      analysisRunId: saved.id,
       result,
       pullRequest: summarizePullRequest(context)
     });
@@ -126,6 +131,10 @@ function handleAnalyzeError(error: unknown) {
 
   if (message.startsWith("GitHub") || message.startsWith("Invalid") || message.startsWith("Expected")) {
     return errorResponse(message, 400);
+  }
+
+  if (message.includes("DATABASE_URL")) {
+    return errorResponse(message, 500);
   }
 
   return errorResponse("BitSpam could not analyze that pull request.", 500);

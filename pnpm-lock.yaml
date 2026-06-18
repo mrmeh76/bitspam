@@ -78,6 +78,9 @@ importers:
       '@bitspam/analyzer':
         specifier: workspace:*
         version: link:../../packages/analyzer
+      '@bitspam/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@bitspam/github':
         specifier: workspace:*
         version: link:../../packages/github
