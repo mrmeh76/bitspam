@@ -137,6 +137,47 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/worker:
+    dependencies:
+      '@bitspam/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+
+  packages/analyzer:
+    dependencies:
+      '@bitspam/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/db:
+    dependencies:
+      '@bitspam/shared':
+        specifier: workspace:*
+        version: link:../shared
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
+    devDependencies:
+      drizzle-kit:
+        specifier: ^0.31.10
+        version: 0.31.10
+
+  packages/github: {}
+
+  packages/queue:
+    dependencies:
+      bullmq:
+        specifier: ^5.78.1
+        version: 5.78.1
+
+  packages/shared: {}
+
 packages:
 
   '@alloc/quick-lru@5.2.0':
