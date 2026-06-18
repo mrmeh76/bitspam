@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   GitPullRequest,
   History,
   LayoutDashboard,
@@ -17,11 +16,13 @@ import type { AuthSession } from "@/lib/auth";
 
 export function DashboardShell({
   session,
+  showInstallApp = false,
   title,
   subtitle,
   children
 }: {
   session: AuthSession;
+  showInstallApp?: boolean;
   title: string;
   subtitle: string;
   children: ReactNode;
@@ -42,7 +43,9 @@ export function DashboardShell({
 
           <nav className="mt-6 grid gap-1">
             <NavLink href="/dashboard" icon={<LayoutDashboard />}>Dashboard</NavLink>
-            <NavLink href="/api/github/install" icon={<PlugZap />}>Install app</NavLink>
+            {showInstallApp ? (
+              <NavLink href="/api/github/install" icon={<PlugZap />}>Install app</NavLink>
+            ) : null}
             <NavLink href="/analyze" icon={<Search />}>Analyze URL</NavLink>
             <NavLink href="/history" icon={<History />}>History</NavLink>
           </nav>
@@ -87,17 +90,15 @@ export function DashboardShell({
                 <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{subtitle}</p>
               </div>
               <div className="flex gap-2">
-                <Button render={<Link href="/api/github/install" />} variant="outline">
-                  <PlugZap />
-                  Install app
-                </Button>
+                {showInstallApp ? (
+                  <Button render={<Link href="/api/github/install" />} variant="outline">
+                    <PlugZap />
+                    Install app
+                  </Button>
+                ) : null}
                 <Button render={<Link href="/analyze" />} variant="outline">
                   <Search />
                   Analyze URL
-                </Button>
-                <Button render={<Link href="/dashboard" />}>
-                  <BarChart3 />
-                  Console
                 </Button>
               </div>
             </div>

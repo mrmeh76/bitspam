@@ -1,12 +1,10 @@
 import {
   AlertCircle,
   ArrowRight,
-  ChevronDown,
   CheckCircle2,
   Clock3,
   ExternalLink,
   GitPullRequest,
-  LockKeyhole,
   PlugZap,
 } from "lucide-react";
 import Link from "next/link";
@@ -16,6 +14,7 @@ import type { AnalysisHistoryItem } from "@bitspam/db";
 import type { Verdict } from "@bitspam/shared";
 
 import { DashboardShell } from "@/components/dashboard-shell";
+import { RepositoryListPanel } from "@/components/repository-list-panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { requireAuth } from "@/lib/auth";
-import { loadDashboardData, type DashboardData, type DashboardRepository } from "@/lib/dashboard";
+import { loadDashboardData, type DashboardData } from "@/lib/dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -44,18 +43,16 @@ type DashboardPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type RepositoryView = "all" | "installed" | "analyzed";
-
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
   const session = await requireAuth(dashboardNextPath(params));
   const data = await loadDashboardSafely(session);
   const notice = installNotice(params);
-  const repositoryView = repositoryViewFromParams(params);
 
   return (
     <DashboardShell
       session={session}
+      showInstallApp={"error" in data ? true : !hasInstalledApp(data)}
       title="Maintainer dashboard"
       subtitle="A compact operations view for pull requests that need attention, proof, or a fast maintainer decision."
     >
@@ -72,7 +69,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <StatsGrid data={data} />
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
             <PullRequestQueue items={data.queue.length > 0 ? data.queue : data.recent} />
-            <RepositoryList repositories={data.repositories} view={repositoryView} />
+            <RepositoryListPanel repositories={data.repositories} />
           </section>
           <RecentAnalysis items={data.recent} />
         </div>
@@ -134,10 +131,6 @@ function InstallGitHubAppCard({ repositoryCount }: { repositoryCount: number }) 
           <Button render={<Link href="/api/github/install" />} variant="outline">
             <PlugZap />
             Install or manage repos
-          </Button>
-          <Button render={<Link href="/analyze" />}>
-            <GitPullRequest />
-            Analyze public PR
           </Button>
         </div>
       </CardContent>
@@ -231,148 +224,6 @@ function PullRequestQueue({ items }: { items: AnalysisHistoryItem[] }) {
   );
 }
 
-function RepositoryList({
-  repositories,
-  view
-}: {
-  repositories: DashboardRepository[];
-  view: RepositoryView;
-}) {
-  const visibleRepositories = filterRepositories(repositories, view);
-
-  return (
-    <Card>
-      <CardHeader className="gap-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle>Repositories</CardTitle>
-            <CardDescription>
-              {repositories.length === 0
-                ? "Install BitSpam or run a public PR analysis to populate this view."
-                : `${visibleRepositories.length} of ${repositories.length} repository view(s).`}
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <RepositoryViewMenu view={view} />
-            <Button render={<Link href="/api/github/install" />} size="sm" variant="outline">
-              <PlugZap />
-              Manage repos
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {visibleRepositories.length === 0 ? (
-          <EmptyState actionHref="/api/github/install" actionLabel="Install GitHub App" />
-        ) : (
-          <div className="bitspam-scrollbar grid max-h-[360px] gap-2 overflow-y-auto pr-1.5">
-            {visibleRepositories.map((repository) => (
-              <RepositoryCard key={repository.fullName} repository={repository} />
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RepositoryViewMenu({ view }: { view: RepositoryView }) {
-  return (
-    <details className="group relative">
-      <summary className="inline-flex h-7 cursor-pointer list-none items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-        {repositoryViewLabel(view)}
-        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="absolute right-0 z-20 mt-1 grid w-48 gap-1 rounded-lg border border-border bg-popover p-1 text-sm text-popover-foreground shadow-md">
-        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
-          Repository view
-        </div>
-        <Link className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground" href="/dashboard">
-          All repositories
-        </Link>
-        <Link
-          className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
-          href="/dashboard?repoView=installed"
-        >
-          Installed only
-        </Link>
-        <Link
-          className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
-          href="/dashboard?repoView=analyzed"
-        >
-          Analyzed only
-        </Link>
-        <div className="my-1 h-px bg-border" />
-        <Link
-          className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
-          href="/api/github/install"
-        >
-          Change repositories
-        </Link>
-      </div>
-    </details>
-  );
-}
-
-function RepositoryCard({ repository }: { repository: DashboardRepository }) {
-  const hasAnalysis = repository.runs > 0;
-  const content = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate font-medium">{repository.fullName}</span>
-            {repository.isPrivate ? (
-              <Badge variant="outline">
-                <LockKeyhole />
-                private
-              </Badge>
-            ) : null}
-            <Badge variant={repository.source === "installed" ? "secondary" : "outline"}>
-              {repository.source === "installed" ? "installed" : "analyzed"}
-            </Badge>
-          </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {hasAnalysis
-              ? `${repository.pullRequests} PRs, ${repository.runs} runs`
-              : "No PR checks yet."}
-          </div>
-        </div>
-        <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-      </div>
-      {hasAnalysis ? (
-        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-          <MiniMetric label="Avg" value={repository.averageScore ?? "-"} />
-          <MiniMetric label="Queue" value={repository.activeRuns} />
-          <MiniMetric label="Risk" value={repository.highRiskRuns} />
-        </div>
-      ) : null}
-    </>
-  );
-
-  if (!hasAnalysis) {
-    return (
-      <a
-        className="block rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
-        href={`https://github.com/${repository.fullName}`}
-        rel="noreferrer"
-        target="_blank"
-      >
-        {content}
-      </a>
-    );
-  }
-
-  return (
-    <Link
-      className="rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
-      href={`/dashboard/repos/${repository.owner}/${repository.repo}`}
-    >
-      {content}
-    </Link>
-  );
-}
-
 function RecentAnalysis({ items }: { items: AnalysisHistoryItem[] }) {
   return (
     <Card>
@@ -444,15 +295,6 @@ function RecentAnalysis({ items }: { items: AnalysisHistoryItem[] }) {
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-md bg-muted/60 px-2 py-1">
-      <div>{label}</div>
-      <div className="font-semibold tabular-nums text-foreground">{value}</div>
-    </div>
-  );
-}
-
 function EmptyState({ actionHref, actionLabel }: { actionHref: string; actionLabel: string }) {
   return (
     <div className="flex min-h-36 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -503,39 +345,8 @@ function statusVariant(status: AnalysisHistoryItem["status"]): "default" | "seco
   return "outline";
 }
 
-function filterRepositories(
-  repositories: DashboardRepository[],
-  view: RepositoryView
-): DashboardRepository[] {
-  if (view === "installed") {
-    return repositories.filter((repository) => repository.source === "installed");
-  }
-
-  if (view === "analyzed") {
-    return repositories.filter((repository) => repository.runs > 0);
-  }
-
-  return repositories;
-}
-
-function repositoryViewFromParams(
-  params: Record<string, string | string[] | undefined> | undefined
-): RepositoryView {
-  const view = firstParam(params?.repoView);
-
-  return view === "installed" || view === "analyzed" ? view : "all";
-}
-
-function repositoryViewLabel(view: RepositoryView): string {
-  if (view === "installed") {
-    return "Installed only";
-  }
-
-  if (view === "analyzed") {
-    return "Analyzed only";
-  }
-
-  return "All repositories";
+function hasInstalledApp(data: DashboardData): boolean {
+  return data.repositories.some((repository) => repository.source === "installed");
 }
 
 function dashboardNextPath(
