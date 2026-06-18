@@ -1,10 +1,9 @@
-import { analyzePullRequest, createAIProviderFromEnv } from "@bitspam/analyzer";
-import { saveAnalysisRun } from "@bitspam/db";
-import { fetchPullRequestContextFromUrl } from "@bitspam/github";
-import type { PullRequestContext } from "@bitspam/shared";
+import { createQueuedAnalysisRun, failAnalysisRun } from "@bitspam/db";
+import { parseGitHubPullRequestUrl } from "@bitspam/github";
 import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/db";
+import { getAnalyzePrQueue } from "@/lib/queue";
 
 export const runtime = "nodejs";
 
@@ -26,75 +25,53 @@ export async function POST(request: Request) {
   }
 
   try {
-    const context = await fetchPullRequestContextFromUrl(body.url.trim(), {
-      githubToken: process.env.GITHUB_TOKEN
+    const url = body.url.trim();
+    const location = parseGitHubPullRequestUrl(url);
+    const saved = await createQueuedAnalysisRun(getDb(), {
+      ...location,
+      url
     });
-    const result = await analyzePullRequest(context, {
-      aiProvider: createAIProviderFromEnv({
-        AI_PROVIDER: process.env.AI_PROVIDER,
-        GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-        GEMINI_MODEL: process.env.GEMINI_MODEL,
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-        OPENAI_MODEL: process.env.OPENAI_MODEL
-      })
-    });
-    const saved = await saveAnalysisRun(getDb(), { context, result });
+
+    try {
+      await getAnalyzePrQueue().add(
+        "analyze-pr",
+        {
+          analysisRunId: saved.id,
+          url,
+          ...location
+        },
+        {
+          attempts: 2,
+          backoff: {
+            type: "exponential",
+            delay: 5000
+          },
+          removeOnComplete: 100,
+          removeOnFail: 100
+        }
+      );
+    } catch (error) {
+      await failAnalysisRun(
+        getDb(),
+        saved.id,
+        error instanceof Error ? error.message : "Failed to enqueue analysis job."
+      );
+
+      throw error;
+    }
 
     return NextResponse.json({
       analysisRunId: saved.id,
-      result,
-      pullRequest: summarizePullRequest(context)
-    });
+      status: "queued",
+      pullRequest: {
+        owner: location.owner,
+        repo: location.repo,
+        number: location.number
+      }
+    }, { status: 202 });
   } catch (error) {
     return handleAnalyzeError(error);
   }
-}
-
-function summarizePullRequest(context: PullRequestContext) {
-  const additions = context.changedFiles.reduce(
-    (total, file) => total + file.additions,
-    0
-  );
-  const deletions = context.changedFiles.reduce(
-    (total, file) => total + file.deletions,
-    0
-  );
-
-  return {
-    owner: context.owner,
-    repo: context.repo,
-    number: context.number,
-    title: context.title,
-    authorLogin: context.authorLogin,
-    authorAssociation: context.authorAssociation,
-    headSha: context.headSha,
-    baseSha: context.baseSha,
-    changedFiles: context.changedFiles.map((file) => ({
-      filename: file.filename,
-      status: file.status,
-      additions: file.additions,
-      deletions: file.deletions,
-      changes: file.changes
-    })),
-    totals: {
-      files: context.changedFiles.length,
-      additions,
-      deletions,
-      changes: additions + deletions,
-      commits: context.commits.length,
-      checkRuns: context.checkRuns.length,
-      comments: context.comments.length,
-      linkedIssues: context.linkedIssues.length
-    },
-    repoFiles: {
-      hasReadme: Boolean(context.repoFiles.readme),
-      hasContributing: Boolean(context.repoFiles.contributing),
-      hasPullRequestTemplate: Boolean(context.repoFiles.pullRequestTemplate),
-      hasCodeowners: Boolean(context.repoFiles.codeowners),
-      hasBitspamConfig: Boolean(context.repoFiles.bitspamConfig)
-    },
-    contributorStats: context.contributorStats
-  };
 }
 
 function handleAnalyzeError(error: unknown) {
@@ -133,8 +110,15 @@ function handleAnalyzeError(error: unknown) {
     return errorResponse(message, 400);
   }
 
-  if (message.includes("DATABASE_URL")) {
+  if (message.includes("DATABASE_URL") || message.includes("REDIS_URL")) {
     return errorResponse(message, 500);
+  }
+
+  if (message.includes("ECONNREFUSED")) {
+    return errorResponse(
+      "BitSpam could not connect to Redis to queue this analysis job.",
+      503
+    );
   }
 
   return errorResponse("BitSpam could not analyze that pull request.", 500);

@@ -13,7 +13,7 @@ import {
   ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -39,9 +39,24 @@ import { Textarea } from "@/components/ui/textarea";
 
 type AnalyzeResponse = {
   analysisRunId: string;
+  status: "completed";
   result: AnalysisResult;
   pullRequest: PullRequestSummary;
 };
+
+type PendingAnalyzeResponse = {
+  analysisRunId: string;
+  status: "queued" | "processing" | "failed";
+  error?: string | null;
+  pullRequest: {
+    owner: string;
+    repo: string;
+    number: number;
+    title?: string;
+  };
+};
+
+type AnalyzeStatusResponse = AnalyzeResponse | PendingAnalyzeResponse;
 
 type PullRequestSummary = {
   owner: string;
@@ -101,11 +116,77 @@ export default function AnalyzePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
+  const [pendingAnalysis, setPendingAnalysis] = useState<PendingAnalyzeResponse | null>(null);
+  const isAnalysisRunning = isLoading || Boolean(pendingAnalysis);
+
+  useEffect(() => {
+    if (!pendingAnalysis || pendingAnalysis.status === "failed") {
+      return;
+    }
+
+    let cancelled = false;
+    const analysisRunId = pendingAnalysis.analysisRunId;
+
+    async function pollStatus() {
+      try {
+        const response = await fetch(`/api/analyze/${analysisRunId}`, {
+          cache: "no-store"
+        });
+        const payload = (await response.json()) as AnalyzeStatusResponse | { error?: string };
+
+        if (!response.ok) {
+          throw new Error(
+            "error" in payload && payload.error
+              ? payload.error
+              : "Could not load analysis status."
+          );
+        }
+
+        if (cancelled || !("status" in payload)) {
+          return;
+        }
+
+        if (payload.status === "completed") {
+          setAnalysis(payload);
+          setPendingAnalysis(null);
+          setError(null);
+          return;
+        }
+
+        if (payload.status === "failed") {
+          setError(payload.error ?? "Analysis failed.");
+          setPendingAnalysis(null);
+          return;
+        }
+
+        setPendingAnalysis(payload);
+      } catch (caughtError) {
+        if (!cancelled) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load analysis status."
+          );
+        }
+      }
+    }
+
+    const firstPoll = window.setTimeout(() => void pollStatus(), 800);
+    const interval = window.setInterval(() => void pollStatus(), 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(firstPoll);
+      window.clearInterval(interval);
+    };
+  }, [pendingAnalysis]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
+    setAnalysis(null);
+    setPendingAnalysis(null);
 
     try {
       const response = await fetch("/api/analyze", {
@@ -115,16 +196,22 @@ export default function AnalyzePage() {
         },
         body: JSON.stringify({ url })
       });
-      const payload = (await response.json()) as AnalyzeResponse | { error?: string };
+      const payload = (await response.json()) as AnalyzeStatusResponse | { error?: string };
 
       if (!response.ok) {
-        throw new Error("error" in payload ? payload.error : "Analysis failed.");
+        throw new Error("error" in payload && payload.error ? payload.error : "Analysis failed.");
       }
 
-      setAnalysis(payload as AnalyzeResponse);
+      if ("status" in payload && payload.status === "completed") {
+        setAnalysis(payload);
+        return;
+      }
+
+      setPendingAnalysis(payload as PendingAnalyzeResponse);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Analysis failed.");
       setAnalysis(null);
+      setPendingAnalysis(null);
     } finally {
       setIsLoading(false);
     }
@@ -167,11 +254,11 @@ export default function AnalyzePage() {
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
                   />
-                  <Button className="w-full" disabled={isLoading || !url.trim()} type="submit">
-                    {isLoading ? (
+                  <Button className="w-full" disabled={isAnalysisRunning || !url.trim()} type="submit">
+                    {isAnalysisRunning ? (
                       <>
                         <Loader2 className="animate-spin" />
-                        Analyzing
+                        Queued
                       </>
                     ) : (
                       <>
@@ -192,12 +279,20 @@ export default function AnalyzePage() {
               </Alert>
             ) : null}
 
-            {analysis ? <PullRequestFacts pullRequest={analysis.pullRequest} /> : <EmptyState />}
+            {analysis ? (
+              <PullRequestFacts pullRequest={analysis.pullRequest} />
+            ) : pendingAnalysis ? (
+              <PendingAnalysis analysis={pendingAnalysis} />
+            ) : (
+              <EmptyState />
+            )}
           </div>
 
           <div className="space-y-6">
             {analysis ? (
               <AnalysisReport analysis={analysis} />
+            ) : pendingAnalysis ? (
+              <PendingReport analysis={pendingAnalysis} />
             ) : (
               <Card>
                 <CardHeader>
@@ -226,6 +321,45 @@ function EmptyState() {
       <CardContent className="grid gap-2 text-sm text-muted-foreground">
         <div>PR metadata, files, commits, checks, and repository guidance.</div>
         <div>No contributor code is executed.</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PendingAnalysis({ analysis }: { analysis: PendingAnalyzeResponse }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Loader2 className="size-4 animate-spin" />
+          Analysis {analysis.status}
+        </CardTitle>
+        <CardDescription>
+          {analysis.pullRequest.owner}/{analysis.pullRequest.repo} #{analysis.pullRequest.number}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2 text-sm text-muted-foreground">
+        <div>BitSpam queued this pull request for worker processing.</div>
+        <div>The report will appear here automatically when the worker saves it.</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PendingReport({ analysis }: { analysis: PendingAnalyzeResponse }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Report</CardTitle>
+        <CardDescription>Analysis run {analysis.analysisRunId}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex min-h-72 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-sm text-muted-foreground">
+        <Loader2 className="size-5 animate-spin text-foreground" />
+        <div>
+          {analysis.status === "queued"
+            ? "Waiting for a worker."
+            : "Worker is analyzing the PR."}
+        </div>
       </CardContent>
     </Card>
   );

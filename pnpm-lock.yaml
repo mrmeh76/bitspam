@@ -84,6 +84,9 @@ importers:
       '@bitspam/github':
         specifier: workspace:*
         version: link:../../packages/github
+      '@bitspam/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
       '@bitspam/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -151,6 +154,15 @@ importers:
 
   apps/worker:
     dependencies:
+      '@bitspam/analyzer':
+        specifier: workspace:*
+        version: link:../../packages/analyzer
+      '@bitspam/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@bitspam/github':
+        specifier: workspace:*
+        version: link:../../packages/github
       '@bitspam/queue':
         specifier: workspace:*
         version: link:../../packages/queue
