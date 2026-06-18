@@ -8,6 +8,7 @@ export function createAnalyzePrQueue(redisUrl: string) {
   return new Queue<AnalyzePrJobData>(ANALYZE_PR_QUEUE_NAME, {
     connection: {
       url: redisUrl,
+      family: 0,
       maxRetriesPerRequest: null
     }
   });
@@ -23,6 +24,7 @@ export function createAnalyzePrWorker(
     {
       connection: {
         url: redisUrl,
+        family: 0,
         maxRetriesPerRequest: null
       }
     }
