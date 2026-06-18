@@ -173,7 +173,7 @@ function PullRequestTable({
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="max-w- whitespace-normal">
+                  <TableCell className="max-w-130 whitespace-normal">
                     <Link
                       className="font-medium hover:underline"
                       href={`/dashboard/repos/${owner}/${repo}/pulls/${item.pullRequest.number}`}
