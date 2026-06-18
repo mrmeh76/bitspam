@@ -166,6 +166,9 @@ importers:
       '@bitspam/queue':
         specifier: workspace:*
         version: link:../../packages/queue
+      '@bitspam/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -209,6 +212,9 @@ importers:
       '@bitspam/shared':
         specifier: workspace:*
         version: link:../shared
+      '@octokit/auth-app':
+        specifier: ^8.2.0
+        version: 8.2.0
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1

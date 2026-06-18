@@ -17,6 +17,7 @@
     "@bitspam/db": "workspace:*",
     "@bitspam/github": "workspace:*",
     "@bitspam/queue": "workspace:*",
+    "@bitspam/shared": "workspace:*",
     "dotenv": "^17.4.2"
   }
 }
