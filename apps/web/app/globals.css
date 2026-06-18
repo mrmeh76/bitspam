@@ -128,3 +128,32 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  .bitspam-scrollbar {
+    scrollbar-color: color-mix(in oklch, var(--border), var(--primary) 18%) transparent;
+    scrollbar-width: thin;
+  }
+
+  .bitspam-scrollbar::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .bitspam-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .bitspam-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--border), var(--primary) 18%);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  .bitspam-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--muted-foreground), var(--primary) 24%);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+}

@@ -193,7 +193,7 @@ function PullRequestQueue({ items }: { items: AnalysisHistoryItem[] }) {
         {items.length === 0 ? (
           <EmptyState actionHref="/analyze" actionLabel="Analyze a PR" />
         ) : (
-          <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1">
+          <div className="bitspam-scrollbar grid max-h-[360px] gap-2 overflow-y-auto pr-1.5">
             {items.map((item) => (
               <Link
                 className="grid gap-3 rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60 sm:grid-cols-[1fr_150px]"
@@ -265,7 +265,7 @@ function RepositoryList({
         {visibleRepositories.length === 0 ? (
           <EmptyState actionHref="/api/github/install" actionLabel="Install GitHub App" />
         ) : (
-          <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1">
+          <div className="bitspam-scrollbar grid max-h-[360px] gap-2 overflow-y-auto pr-1.5">
             {visibleRepositories.map((repository) => (
               <RepositoryCard key={repository.fullName} repository={repository} />
             ))}
