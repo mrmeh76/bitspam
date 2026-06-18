@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PullRequestContext, RepoPolicy } from "@bitspam/shared";
 
 import { analyzePullRequest } from "./analyze.js";
+import type { AIProvider } from "./ai/provider.js";
 import { parseRepoPolicyConfig } from "./config.js";
 
 const basePolicy: RepoPolicy = {
@@ -161,6 +162,65 @@ describe("analyzePullRequest", () => {
     expect(result.findings.some((finding) => finding.checkId === "test-evidence")).toBe(false);
     expect(result.score).toBeGreaterThanOrEqual(90);
     expect(result.verdict).toBe("review_ready");
+  });
+
+  it("uses AI reasoning as scored context without letting it choose the verdict", async () => {
+    const aiProvider: AIProvider = {
+      name: "test",
+      async analyzeSemanticRisk() {
+        return {
+          provider: "test",
+          bodyMatchesDiff: false,
+          genericDescriptionRisk: "low",
+          suspiciousClaims: [],
+          suggestedProofQuestions: [
+            "Which changed lines implement the behavior described in the PR body?"
+          ],
+          maintainerSummary:
+            "The description overstates the implementation work compared with the small documentation diff.",
+          confidence: 0.91
+        };
+      }
+    };
+    const result = await analyzePullRequest(
+      createContext({
+        title: "Clarify wallet backup instructions in README",
+        body: [
+          "## Summary",
+          "Fixes #42 by clarifying the wallet backup documentation for users.",
+          "## Testing",
+          "Docs-only change. Verified the README section still renders in order."
+        ].join("\n\n"),
+        linkedIssues: [{ number: 42, title: "Backup docs are unclear", state: "open" }],
+        changedFiles: [
+          {
+            filename: "README.md",
+            status: "modified",
+            additions: 4,
+            deletions: 1,
+            changes: 5,
+            patch: "+ Keep your wallet backup phrase offline."
+          }
+        ],
+        checkRuns: [{ name: "CI", status: "completed", conclusion: "success" }],
+        contributorStats: {
+          isFirstTimeContributor: false,
+          priorMergedPrs: 2,
+          priorOpenPrs: 0,
+          priorClosedUnmergedPrs: 0
+        }
+      }),
+      { aiProvider }
+    );
+
+    expect(result.ai?.provider).toBe("test");
+    expect(result.findings.map((finding) => finding.checkId)).toContain("ai-semantic-risk");
+    expect(result.score).toBeGreaterThanOrEqual(80);
+    expect(result.score).toBeLessThan(100);
+    expect(result.verdict).toBe("review_ready");
+    expect(result.suggestedContributorComment).toContain(
+      "Which changed lines implement the behavior described in the PR body?"
+    );
   });
 });
 
