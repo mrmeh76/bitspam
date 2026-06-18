@@ -1,5 +1,7 @@
-import { createQueuedAnalysisRun, failAnalysisRun } from "@bitspam/db";
-import { parseGitHubPullRequestUrl } from "@bitspam/github";
+import { analyzePullRequest, createAIProviderFromEnv } from "@bitspam/analyzer";
+import { createQueuedAnalysisRun, failAnalysisRun, saveAnalysisRun } from "@bitspam/db";
+import { fetchPullRequestContextFromUrl, parseGitHubPullRequestUrl } from "@bitspam/github";
+import type { PullRequestContext } from "@bitspam/shared";
 import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/db";
@@ -27,6 +29,33 @@ export async function POST(request: Request) {
   try {
     const url = body.url.trim();
     const location = parseGitHubPullRequestUrl(url);
+
+    if (analysisMode() === "inline") {
+      const context = await fetchPullRequestContextFromUrl(url, {
+        githubToken: process.env.GITHUB_TOKEN || undefined
+      });
+      const result = await analyzePullRequest(context, {
+        aiProvider: createAIProviderFromEnv({
+          AI_PROVIDER: process.env.AI_PROVIDER,
+          GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+          GEMINI_MODEL: process.env.GEMINI_MODEL,
+          OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+          OPENAI_MODEL: process.env.OPENAI_MODEL
+        })
+      });
+      const saved = await saveAnalysisRun(getDb(), {
+        context,
+        result
+      });
+
+      return NextResponse.json({
+        analysisRunId: saved.id,
+        status: "completed",
+        result,
+        pullRequest: summarizePullRequest(context)
+      });
+    }
+
     const saved = await createQueuedAnalysisRun(getDb(), {
       ...location,
       url
@@ -132,6 +161,57 @@ function getErrorStatus(error: unknown): number | undefined {
   }
 
   return undefined;
+}
+
+function analysisMode(): "inline" | "queue" {
+  return process.env.BITSPAM_ANALYSIS_MODE === "queue" ? "queue" : "inline";
+}
+
+function summarizePullRequest(context: PullRequestContext) {
+  const additions = context.changedFiles.reduce(
+    (total, file) => total + file.additions,
+    0
+  );
+  const deletions = context.changedFiles.reduce(
+    (total, file) => total + file.deletions,
+    0
+  );
+
+  return {
+    owner: context.owner,
+    repo: context.repo,
+    number: context.number,
+    title: context.title,
+    authorLogin: context.authorLogin,
+    authorAssociation: context.authorAssociation,
+    headSha: context.headSha,
+    baseSha: context.baseSha,
+    changedFiles: context.changedFiles.map((file) => ({
+      filename: file.filename,
+      status: file.status,
+      additions: file.additions,
+      deletions: file.deletions,
+      changes: file.changes
+    })),
+    totals: {
+      files: context.changedFiles.length,
+      additions,
+      deletions,
+      changes: additions + deletions,
+      commits: context.commits.length,
+      checkRuns: context.checkRuns.length,
+      comments: context.comments.length,
+      linkedIssues: context.linkedIssues.length
+    },
+    repoFiles: {
+      hasReadme: Boolean(context.repoFiles.readme),
+      hasContributing: Boolean(context.repoFiles.contributing),
+      hasPullRequestTemplate: Boolean(context.repoFiles.pullRequestTemplate),
+      hasCodeowners: Boolean(context.repoFiles.codeowners),
+      hasBitspamConfig: Boolean(context.repoFiles.bitspamConfig)
+    },
+    contributorStats: context.contributorStats
+  };
 }
 
 function errorResponse(message: string, status: number) {
