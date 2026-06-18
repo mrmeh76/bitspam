@@ -10,7 +10,13 @@ import {
   uuid
 } from "drizzle-orm/pg-core";
 
-import type { FindingCategory, FindingSeverity, ScoreBreakdown, Verdict } from "@bitspam/shared";
+import type {
+  AISemanticResult,
+  FindingCategory,
+  FindingSeverity,
+  ScoreBreakdown,
+  Verdict
+} from "@bitspam/shared";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -40,9 +46,9 @@ export const repositories = pgTable(
     name: text("name").notNull(),
     fullName: text("full_name").notNull(),
     isPrivate: boolean("private").notNull().default(false),
-    installationId: uuid("installation_id")
-      .notNull()
-      .references(() => githubInstallations.id, { onDelete: "cascade" }),
+    installationId: uuid("installation_id").references(() => githubInstallations.id, {
+      onDelete: "set null"
+    }),
     ...timestamps
   },
   (table) => [
@@ -88,6 +94,9 @@ export const analysisRuns = pgTable(
     summary: text("summary"),
     rawInput: jsonb("raw_input").$type<Record<string, unknown>>(),
     scoreBreakdown: jsonb("score_breakdown").$type<ScoreBreakdown>(),
+    suggestedContributorComment: text("suggested_contributor_comment"),
+    maintainerRecommendation: text("maintainer_recommendation"),
+    aiResult: jsonb("ai_result").$type<AISemanticResult>(),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     error: text("error")
@@ -131,7 +140,10 @@ export const repoPolicies = pgTable(
     config: jsonb("config").$type<Record<string, unknown>>().notNull(),
     ...timestamps
   },
-  (table) => [index("repo_policies_repository_id_idx").on(table.repositoryId)]
+  (table) => [
+    index("repo_policies_repository_id_idx").on(table.repositoryId),
+    uniqueIndex("repo_policies_repository_source_idx").on(table.repositoryId, table.source)
+  ]
 );
 
 export const webhookEvents = pgTable(

@@ -8,3 +8,5 @@ export function createDbClient(databaseUrl: string) {
 
   return drizzle(client, { schema });
 }
+
+export type BitSpamDb = ReturnType<typeof createDbClient>;
