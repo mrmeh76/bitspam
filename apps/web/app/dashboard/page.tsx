@@ -1,15 +1,13 @@
 import {
   AlertCircle,
   ArrowRight,
-  BarChart3,
+  ChevronDown,
   CheckCircle2,
   Clock3,
   ExternalLink,
   GitPullRequest,
   LockKeyhole,
   PlugZap,
-  ShieldAlert,
-  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -28,6 +26,14 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
 import {
   Table,
@@ -46,11 +52,14 @@ type DashboardPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+type RepositoryView = "all" | "installed" | "analyzed";
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
   const session = await requireAuth(dashboardNextPath(params));
   const data = await loadDashboardSafely(session);
   const notice = installNotice(params);
+  const repositoryView = repositoryViewFromParams(params);
 
   return (
     <DashboardShell
@@ -71,7 +80,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <StatsGrid data={data} />
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
             <PullRequestQueue items={data.queue.length > 0 ? data.queue : data.recent} />
-            <RepositoryList repositories={data.repositories} />
+            <RepositoryList repositories={data.repositories} view={repositoryView} />
           </section>
           <RecentAnalysis items={data.recent} />
         </div>
@@ -146,16 +155,9 @@ function InstallGitHubAppCard({ repositoryCount }: { repositoryCount: number }) 
 
 function StatsGrid({ data }: { data: DashboardData }) {
   return (
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-      <StatCard icon={<BarChart3 />} label="Repositories" value={data.stats.repositories} />
+    <section className="grid gap-3 sm:grid-cols-2">
       <StatCard icon={<GitPullRequest />} label="Pull requests" value={data.stats.pullRequests} />
       <StatCard icon={<Clock3 />} label="Active queue" value={data.stats.activeRuns} />
-      <StatCard icon={<ShieldAlert />} label="High risk" value={data.stats.highRiskRuns} />
-      <StatCard
-        icon={<ShieldCheck />}
-        label="Average score"
-        value={data.stats.averageScore === null ? "-" : data.stats.averageScore}
-      />
     </section>
   );
 }
@@ -199,8 +201,8 @@ function PullRequestQueue({ items }: { items: AnalysisHistoryItem[] }) {
         {items.length === 0 ? (
           <EmptyState actionHref="/analyze" actionLabel="Analyze a PR" />
         ) : (
-          <div className="grid gap-2">
-            {items.slice(0, 8).map((item) => (
+          <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1">
+            {items.map((item) => (
               <Link
                 className="grid gap-3 rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60 sm:grid-cols-[1fr_150px]"
                 href={`/dashboard/repos/${item.repository.owner}/${item.repository.name}/pulls/${item.pullRequest.number}`}
@@ -237,27 +239,75 @@ function PullRequestQueue({ items }: { items: AnalysisHistoryItem[] }) {
   );
 }
 
-function RepositoryList({ repositories }: { repositories: DashboardRepository[] }) {
+function RepositoryList({
+  repositories,
+  view
+}: {
+  repositories: DashboardRepository[];
+  view: RepositoryView;
+}) {
+  const visibleRepositories = filterRepositories(repositories, view);
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Repositories</CardTitle>
-        <CardDescription>
-          {repositories.length === 0
-            ? "Install BitSpam or run a public PR analysis to populate this view."
-            : `${repositories.length} repository view(s).`}
-        </CardDescription>
+      <CardHeader className="gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>Repositories</CardTitle>
+            <CardDescription>
+              {repositories.length === 0
+                ? "Install BitSpam or run a public PR analysis to populate this view."
+                : `${visibleRepositories.length} of ${repositories.length} repository view(s).`}
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <RepositoryViewMenu view={view} />
+            <Button render={<Link href="/api/github/install" />} size="sm" variant="outline">
+              <PlugZap />
+              Manage repos
+            </Button>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="grid gap-2">
-        {repositories.length === 0 ? (
+      <CardContent>
+        {visibleRepositories.length === 0 ? (
           <EmptyState actionHref="/api/github/install" actionLabel="Install GitHub App" />
         ) : (
-          repositories.map((repository) => (
-            <RepositoryCard key={repository.fullName} repository={repository} />
-          ))
+          <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1">
+            {visibleRepositories.map((repository) => (
+              <RepositoryCard key={repository.fullName} repository={repository} />
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function RepositoryViewMenu({ view }: { view: RepositoryView }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
+        {repositoryViewLabel(view)}
+        <ChevronDown />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuLabel>Repository view</DropdownMenuLabel>
+        <DropdownMenuItem render={<Link href="/dashboard" />}>
+          All repositories
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/dashboard?repoView=installed" />}>
+          Installed only
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/dashboard?repoView=analyzed" />}>
+          Analyzed only
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/api/github/install" />}>
+          Change repositories
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -282,16 +332,18 @@ function RepositoryCard({ repository }: { repository: DashboardRepository }) {
           <div className="mt-1 text-sm text-muted-foreground">
             {hasAnalysis
               ? `${repository.pullRequests} PRs, ${repository.runs} runs`
-              : "Ready for automatic PR checks."}
+              : "No PR checks yet."}
           </div>
         </div>
         <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-        <MiniMetric label="Avg" value={repository.averageScore ?? "-"} />
-        <MiniMetric label="Queue" value={repository.activeRuns} />
-        <MiniMetric label="Risk" value={repository.highRiskRuns} />
-      </div>
+      {hasAnalysis ? (
+        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+          <MiniMetric label="Avg" value={repository.averageScore ?? "-"} />
+          <MiniMetric label="Queue" value={repository.activeRuns} />
+          <MiniMetric label="Risk" value={repository.highRiskRuns} />
+        </div>
+      ) : null}
     </>
   );
 
@@ -446,6 +498,41 @@ function statusVariant(status: AnalysisHistoryItem["status"]): "default" | "seco
   }
 
   return "outline";
+}
+
+function filterRepositories(
+  repositories: DashboardRepository[],
+  view: RepositoryView
+): DashboardRepository[] {
+  if (view === "installed") {
+    return repositories.filter((repository) => repository.source === "installed");
+  }
+
+  if (view === "analyzed") {
+    return repositories.filter((repository) => repository.runs > 0);
+  }
+
+  return repositories;
+}
+
+function repositoryViewFromParams(
+  params: Record<string, string | string[] | undefined> | undefined
+): RepositoryView {
+  const view = firstParam(params?.repoView);
+
+  return view === "installed" || view === "analyzed" ? view : "all";
+}
+
+function repositoryViewLabel(view: RepositoryView): string {
+  if (view === "installed") {
+    return "Installed only";
+  }
+
+  if (view === "analyzed") {
+    return "Analyzed only";
+  }
+
+  return "All repositories";
 }
 
 function dashboardNextPath(
