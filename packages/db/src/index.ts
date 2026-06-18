@@ -6,6 +6,7 @@ export {
   failAnalysisRun,
   getAnalysisRunDetail,
   listRecentAnalysisRuns,
+  listTrackedRepositories,
   markAnalysisRunProcessing,
   markWebhookEventProcessed,
   saveAnalysisRun,
@@ -22,6 +23,7 @@ export type {
   SaveAnalysisRunInput,
   SaveWebhookEventInput,
   SavedAnalysisRun,
+  TrackedRepository,
   UpsertGitHubInstallationInput,
   UpsertGitHubRepositoryInput
 } from "./persistence.js";

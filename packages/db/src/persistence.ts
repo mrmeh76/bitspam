@@ -95,6 +95,21 @@ export type AnalysisHistoryItem = {
   };
 };
 
+export type TrackedRepository = {
+  id: string;
+  githubId: string;
+  owner: string;
+  name: string;
+  fullName: string;
+  isPrivate: boolean;
+  updatedAt: Date;
+  installation: {
+    installationId: string;
+    accountLogin: string;
+    accountType: string;
+  } | null;
+};
+
 export type AnalysisRunDetail = AnalysisHistoryItem & {
   rawInput: Record<string, unknown> | null;
   scoreBreakdown: AnalysisResult["scoreBreakdown"] | null;
@@ -388,6 +403,38 @@ export async function listRecentAnalysisRuns(
       findingsCount: await countFindingsForRun(db, row.analysisRun.id)
     }))
   );
+}
+
+export async function listTrackedRepositories(
+  db: BitSpamDb,
+  limit = 200
+): Promise<TrackedRepository[]> {
+  const rows = await db
+    .select({
+      repository: repositories,
+      installation: githubInstallations
+    })
+    .from(repositories)
+    .leftJoin(githubInstallations, eq(repositories.installationId, githubInstallations.id))
+    .orderBy(desc(repositories.updatedAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    id: row.repository.id,
+    githubId: row.repository.githubId,
+    owner: row.repository.owner,
+    name: row.repository.name,
+    fullName: row.repository.fullName,
+    isPrivate: row.repository.isPrivate,
+    updatedAt: row.repository.updatedAt,
+    installation: row.installation
+      ? {
+          installationId: row.installation.installationId,
+          accountLogin: row.installation.accountLogin,
+          accountType: row.installation.accountType
+        }
+      : null
+  }));
 }
 
 export async function getAnalysisRunDetail(
