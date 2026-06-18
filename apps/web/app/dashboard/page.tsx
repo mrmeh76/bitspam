@@ -26,14 +26,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
 import {
   Table,
@@ -286,28 +278,39 @@ function RepositoryList({
 
 function RepositoryViewMenu({ view }: { view: RepositoryView }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
+    <details className="group relative">
+      <summary className="inline-flex h-7 cursor-pointer list-none items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
         {repositoryViewLabel(view)}
-        <ChevronDown />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel>Repository view</DropdownMenuLabel>
-        <DropdownMenuItem render={<Link href="/dashboard" />}>
+        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="absolute right-0 z-20 mt-1 grid w-48 gap-1 rounded-lg border border-border bg-popover p-1 text-sm text-popover-foreground shadow-md">
+        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
+          Repository view
+        </div>
+        <Link className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground" href="/dashboard">
           All repositories
-        </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/dashboard?repoView=installed" />}>
+        </Link>
+        <Link
+          className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
+          href="/dashboard?repoView=installed"
+        >
           Installed only
-        </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/dashboard?repoView=analyzed" />}>
+        </Link>
+        <Link
+          className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
+          href="/dashboard?repoView=analyzed"
+        >
           Analyzed only
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/api/github/install" />}>
+        </Link>
+        <div className="my-1 h-px bg-border" />
+        <Link
+          className="rounded-md px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
+          href="/api/github/install"
+        >
           Change repositories
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </Link>
+      </div>
+    </details>
   );
 }
 
