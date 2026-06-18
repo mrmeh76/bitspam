@@ -13,6 +13,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@bitspam/analyzer": "workspace:*",
+    "@bitspam/db": "workspace:*",
+    "@bitspam/github": "workspace:*",
     "@bitspam/queue": "workspace:*",
     "dotenv": "^17.4.2"
   }
