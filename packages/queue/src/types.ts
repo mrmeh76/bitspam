@@ -8,6 +8,7 @@ export type AnalyzePrJobData = {
   repositoryId?: string;
   pullRequestId?: string;
   headSha?: string;
+  checkRunId?: string;
 };
 
 export type AnalyzePrJobResult = {
