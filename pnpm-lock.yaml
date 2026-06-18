@@ -75,6 +75,15 @@ importers:
       '@base-ui/react':
         specifier: ^1.5.0
         version: 1.5.0(@types/react@19.2.17)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@bitspam/analyzer':
+        specifier: workspace:*
+        version: link:../../packages/analyzer
+      '@bitspam/github':
+        specifier: workspace:*
+        version: link:../../packages/github
+      '@bitspam/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -168,7 +177,14 @@ importers:
         specifier: ^0.31.10
         version: 0.31.10
 
-  packages/github: {}
+  packages/github:
+    dependencies:
+      '@bitspam/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@octokit/rest':
+        specifier: ^22.0.1
+        version: 22.0.1
 
   packages/queue:
     dependencies:

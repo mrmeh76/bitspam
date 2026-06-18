@@ -15,5 +15,9 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@bitspam/shared": "workspace:*",
+    "@octokit/rest": "^22.0.1"
   }
 }
