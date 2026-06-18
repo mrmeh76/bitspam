@@ -1,19 +1,30 @@
+import { analyzePullRequest, createAIProviderFromEnv } from "@bitspam/analyzer";
 import {
+  completeAnalysisRun,
   createQueuedAnalysisRun,
+  failAnalysisRun,
   markWebhookEventProcessed,
+  markAnalysisRunProcessing,
+  saveProofCommentRecord,
   saveWebhookEvent,
   upsertGitHubInstallation,
   upsertGitHubRepository
 } from "@bitspam/db";
 import {
+  applyBitSpamReviewActions,
   createBitSpamCheckRun,
+  failBitSpamCheckRun,
+  fetchPullRequestContextFromUrl,
+  getInstallationAccessToken,
   isInstallationWebhookPayload,
   isPullRequestWebhookPayload,
   parseWebhookJson,
   shouldAnalyzePullRequestAction,
+  updateBitSpamCheckRun,
   verifyGitHubWebhookSignature
 } from "@bitspam/github";
 import type { PullRequestWebhookPayload } from "@bitspam/github";
+import type { AnalysisResult } from "@bitspam/shared";
 import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/db";
@@ -154,6 +165,17 @@ async function handlePullRequestWebhook(payload: PullRequestWebhookPayload): Pro
     detailsUrl
   });
 
+  if (analysisMode() === "inline") {
+    await processPullRequestInline({
+      payload,
+      analysisRunId: saved.id,
+      checkRunId,
+      pullRequestId: saved.pullRequestId
+    });
+
+    return;
+  }
+
   await getAnalyzePrQueue().add(
     "analyze-pr",
     {
@@ -178,6 +200,121 @@ async function handlePullRequestWebhook(payload: PullRequestWebhookPayload): Pro
       removeOnFail: 100
     }
   );
+}
+
+async function processPullRequestInline({
+  payload,
+  analysisRunId,
+  checkRunId,
+  pullRequestId
+}: {
+  payload: PullRequestWebhookPayload;
+  analysisRunId: string;
+  checkRunId: number;
+  pullRequestId: string;
+}): Promise<void> {
+  const credentials = getGitHubAppCredentials();
+  const installationId = payload.installation!.id;
+  const owner = payload.repository.owner.login;
+  const repo = payload.repository.name;
+  const number = payload.pull_request.number;
+  const detailsUrl = detailsUrlFor(analysisRunId);
+
+  try {
+    await markAnalysisRunProcessing(getDb(), analysisRunId);
+
+    const githubToken = await getInstallationAccessToken(credentials, installationId);
+    const context = await fetchPullRequestContextFromUrl(payload.pull_request.html_url, {
+      githubToken
+    });
+    const result = await analyzePullRequest(context, {
+      aiProvider: createAIProviderFromEnv({
+        AI_PROVIDER: process.env.AI_PROVIDER,
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+        GEMINI_MODEL: process.env.GEMINI_MODEL,
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        OPENAI_MODEL: process.env.OPENAI_MODEL
+      })
+    });
+    const saved = await completeAnalysisRun(getDb(), {
+      analysisRunId,
+      context,
+      result
+    });
+
+    await updateBitSpamCheckRun({
+      credentials,
+      installationId,
+      owner,
+      repo,
+      number,
+      checkRunId,
+      result,
+      detailsUrl
+    });
+
+    const commentBody = shouldPostProofComment(result)
+      ? buildProofComment(analysisRunId, result)
+      : undefined;
+    const { commentId } = await applyBitSpamReviewActions({
+      credentials,
+      installationId,
+      owner,
+      repo,
+      number,
+      result,
+      commentBody
+    });
+
+    if (commentBody) {
+      await saveProofCommentRecord(getDb(), {
+        pullRequestId: saved.pullRequestId ?? pullRequestId,
+        analysisRunId,
+        body: commentBody,
+        githubCommentId: commentId
+      });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Analysis failed.";
+
+    await failAnalysisRun(getDb(), analysisRunId, message);
+
+    try {
+      await failBitSpamCheckRun({
+        credentials,
+        installationId,
+        owner,
+        repo,
+        number,
+        checkRunId,
+        error: message,
+        detailsUrl
+      });
+    } catch {
+      // Keep the webhook response focused on the original analysis failure.
+    }
+  }
+}
+
+function shouldPostProofComment(result: AnalysisResult): boolean {
+  return result.verdict !== "review_ready";
+}
+
+function buildProofComment(analysisRunId: string, result: AnalysisResult): string {
+  return [
+    "<!-- bitspam:proof-of-work -->",
+    `BitSpam scored this pull request at ${result.score}/100.`,
+    "",
+    result.suggestedContributorComment,
+    "",
+    detailsUrlFor(analysisRunId)
+      ? `Saved report: ${detailsUrlFor(analysisRunId)}`
+      : `Analysis run: ${analysisRunId}`
+  ].join("\n");
+}
+
+function analysisMode(): "inline" | "queue" {
+  return process.env.BITSPAM_ANALYSIS_MODE === "queue" ? "queue" : "inline";
 }
 
 function getGitHubAppCredentials() {
