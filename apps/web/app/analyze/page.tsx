@@ -8,9 +8,11 @@ import {
   ExternalLink,
   FileText,
   GitPullRequest,
+  History,
   Loader2,
   ShieldAlert
 } from "lucide-react";
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -36,6 +38,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 type AnalyzeResponse = {
+  analysisRunId: string;
   result: AnalysisResult;
   pullRequest: PullRequestSummary;
 };
@@ -140,7 +143,13 @@ export default function AnalyzePage() {
               Pull request analysis
             </h1>
           </div>
-          <Badge variant="outline">Public GitHub PRs</Badge>
+          <div className="flex items-center gap-2">
+            <Button render={<Link href="/history" />} size="sm" variant="outline">
+              <History />
+              History
+            </Button>
+            <Badge variant="outline">Public GitHub PRs</Badge>
+          </div>
         </header>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
@@ -303,6 +312,10 @@ function AnalysisReport({ analysis }: { analysis: AnalyzeResponse }) {
           <CardDescription>{result.summary}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          <Button render={<Link href={`/history/${analysis.analysisRunId}`} />} size="sm" variant="outline">
+            <History />
+            View saved run
+          </Button>
           <Progress value={result.score}>
             <ProgressLabel>BitSpam score</ProgressLabel>
             <span className="ml-auto text-sm text-muted-foreground tabular-nums">

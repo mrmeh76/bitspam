@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, History, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,16 @@ export default function Home() {
             Score a public GitHub pull request for intent, scope, validation,
             risk, CI signal, and maintainer burden.
           </p>
-          <Button size="lg" render={<Link href="/analyze" />}>
-            Analyze a PR
-            <ArrowRight />
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="lg" render={<Link href="/analyze" />}>
+              Analyze a PR
+              <ArrowRight />
+            </Button>
+            <Button size="lg" render={<Link href="/history" />} variant="outline">
+              History
+              <History />
+            </Button>
+          </div>
         </section>
       </div>
     </main>
