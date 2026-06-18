@@ -1,5 +1,6 @@
 export {
   ANALYZE_PR_QUEUE_NAME,
-  createAnalyzePrQueue
+  createAnalyzePrQueue,
+  createAnalyzePrWorker
 } from "./queues.js";
-export type { AnalyzePrJobData } from "./types.js";
+export type { AnalyzePrJobData, AnalyzePrJobResult } from "./types.js";
