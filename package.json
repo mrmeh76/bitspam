@@ -1,0 +1,46 @@
+{
+  "name": "bitspam",
+  "version": "0.1.0",
+  "description": "BitSpam is a GitHub App and maintainer triage tool for detecting low-quality pull requests without blocking serious contributors.",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "format": "prettier --write .",
+    "worker:dev": "pnpm --filter @bitspam/worker dev",
+    "db:generate": "pnpm --filter @bitspam/db db:generate",
+    "db:push": "pnpm --filter @bitspam/db db:push",
+    "db:studio": "pnpm --filter @bitspam/db db:studio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@11.7.0",
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "eslint": "^10.5.0",
+    "prettier": "^3.8.4",
+    "tsx": "^4.22.4",
+    "turbo": "^2.9.18",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  },
+  "private": true,
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@octokit/auth-app": "^8.2.0",
+    "@octokit/rest": "^22.0.1",
+    "@octokit/webhooks": "^14.2.0",
+    "bullmq": "^5.78.1",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "ioredis": "^5.11.1",
+    "openai": "^6.43.0",
+    "postgres": "^3.4.9",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  }
+}
