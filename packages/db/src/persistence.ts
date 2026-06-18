@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { desc, eq } from "drizzle-orm";
 
 import type { AnalysisResult, PullRequestContext } from "@bitspam/shared";
@@ -6,9 +8,12 @@ import type { BitSpamDb } from "./client.js";
 import {
   analysisRuns,
   findings,
+  githubInstallations,
+  proofComments,
   pullRequests,
   repositories,
   repoPolicies,
+  webhookEvents,
   type AnalysisRunStatus
 } from "./schema.js";
 
@@ -17,6 +22,35 @@ export type CreateQueuedAnalysisRunInput = {
   repo: string;
   number: number;
   url: string;
+  repositoryGithubId?: string | undefined;
+  isPrivate?: boolean | undefined;
+  installationDatabaseId?: string | undefined;
+  title?: string | undefined;
+  authorLogin?: string | undefined;
+  headSha?: string | undefined;
+  baseSha?: string | undefined;
+};
+
+export type UpsertGitHubInstallationInput = {
+  installationId: string;
+  accountLogin: string;
+  accountType: string;
+};
+
+export type UpsertGitHubRepositoryInput = {
+  githubId: string;
+  owner: string;
+  name: string;
+  fullName: string;
+  isPrivate: boolean;
+  installationDatabaseId?: string | undefined;
+};
+
+export type SaveWebhookEventInput = {
+  githubDelivery: string;
+  eventName: string;
+  action?: string | undefined;
+  payload: Record<string, unknown>;
 };
 
 export type SaveAnalysisRunInput = {
@@ -70,22 +104,125 @@ export type AnalysisRunDetail = AnalysisHistoryItem & {
   findings: AnalysisResult["findings"];
 };
 
+export async function upsertGitHubInstallation(
+  db: BitSpamDb,
+  input: UpsertGitHubInstallationInput
+): Promise<{ id: string }> {
+  const [installation] = await db
+    .insert(githubInstallations)
+    .values({
+      installationId: input.installationId,
+      accountLogin: input.accountLogin,
+      accountType: input.accountType
+    })
+    .onConflictDoUpdate({
+      target: githubInstallations.installationId,
+      set: {
+        accountLogin: input.accountLogin,
+        accountType: input.accountType,
+        updatedAt: new Date()
+      }
+    })
+    .returning({ id: githubInstallations.id });
+
+  if (!installation) {
+    throw new Error("Failed to save GitHub installation.");
+  }
+
+  return installation;
+}
+
+export async function upsertGitHubRepository(
+  db: BitSpamDb,
+  input: UpsertGitHubRepositoryInput
+): Promise<{ id: string }> {
+  return upsertRepository(db, {
+    owner: input.owner,
+    repo: input.name,
+    repositoryGithubId: input.githubId,
+    fullName: input.fullName,
+    isPrivate: input.isPrivate,
+    installationDatabaseId: input.installationDatabaseId
+  });
+}
+
+export async function saveWebhookEvent(
+  db: BitSpamDb,
+  input: SaveWebhookEventInput
+): Promise<{ id: string | undefined }> {
+  const [event] = await db
+    .insert(webhookEvents)
+    .values({
+      githubDelivery: input.githubDelivery,
+      eventName: input.eventName,
+      action: input.action,
+      payload: input.payload
+    })
+    .onConflictDoNothing({
+      target: webhookEvents.githubDelivery
+    })
+    .returning({ id: webhookEvents.id });
+
+  return { id: event?.id };
+}
+
+export async function markWebhookEventProcessed(
+  db: BitSpamDb,
+  githubDelivery: string
+): Promise<void> {
+  await db
+    .update(webhookEvents)
+    .set({ processed: true })
+    .where(eq(webhookEvents.githubDelivery, githubDelivery));
+}
+
+export async function saveProofCommentRecord(
+  db: BitSpamDb,
+  input: {
+    pullRequestId: string;
+    analysisRunId: string;
+    body: string;
+    commentType?: string | undefined;
+    githubCommentId?: string | number | undefined;
+  }
+): Promise<void> {
+  await db
+    .insert(proofComments)
+    .values({
+      pullRequestId: input.pullRequestId,
+      analysisRunId: input.analysisRunId,
+      commentType: input.commentType ?? "proof-of-work",
+      githubCommentId: input.githubCommentId ? String(input.githubCommentId) : undefined,
+      bodyHash: createHash("sha256").update(input.body).digest("hex")
+    })
+    .onConflictDoNothing({
+      target: [
+        proofComments.pullRequestId,
+        proofComments.commentType,
+        proofComments.bodyHash
+      ]
+    });
+}
+
 export async function createQueuedAnalysisRun(
   db: BitSpamDb,
   input: CreateQueuedAnalysisRunInput
 ): Promise<SavedAnalysisRun> {
   const repository = await upsertRepository(db, {
     owner: input.owner,
-    repo: input.repo
+    repo: input.repo,
+    repositoryGithubId: input.repositoryGithubId,
+    isPrivate: input.isPrivate,
+    installationDatabaseId: input.installationDatabaseId
   });
   const pullRequest = await upsertQueuedPullRequest(db, repository.id, {
     owner: input.owner,
     repo: input.repo,
     number: input.number,
-    title: `Pending analysis for #${input.number}`,
-    authorLogin: "unknown",
-    headSha: "",
-    baseSha: ""
+    title: input.title ?? `Pending analysis for #${input.number}`,
+    authorLogin: input.authorLogin ?? "unknown",
+    headSha: input.headSha ?? "",
+    baseSha: input.baseSha ?? ""
   });
   const [analysisRun] = await db
     .insert(analysisRuns)
@@ -322,21 +459,31 @@ async function insertFindings(
 
 async function upsertRepository(
   db: BitSpamDb,
-  context: Pick<PullRequestContext, "owner" | "repo">
+  context: Pick<PullRequestContext, "owner" | "repo"> & {
+    repositoryGithubId?: string | undefined;
+    fullName?: string | undefined;
+    isPrivate?: boolean | undefined;
+    installationDatabaseId?: string | undefined;
+  }
 ) {
+  const fullName = context.fullName ?? `${context.owner}/${context.repo}`;
   const [repository] = await db
     .insert(repositories)
     .values({
-      githubId: `${context.owner}/${context.repo}`,
+      githubId: context.repositoryGithubId ?? fullName,
       owner: context.owner,
       name: context.repo,
-      fullName: `${context.owner}/${context.repo}`,
-      isPrivate: false
+      fullName,
+      isPrivate: context.isPrivate ?? false,
+      installationId: context.installationDatabaseId
     })
     .onConflictDoUpdate({
       target: [repositories.owner, repositories.name],
       set: {
-        fullName: `${context.owner}/${context.repo}`,
+        githubId: context.repositoryGithubId ?? fullName,
+        fullName,
+        isPrivate: context.isPrivate ?? false,
+        installationId: context.installationDatabaseId,
         updatedAt: new Date()
       }
     })

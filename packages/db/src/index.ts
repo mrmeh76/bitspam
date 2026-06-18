@@ -7,7 +7,12 @@ export {
   getAnalysisRunDetail,
   listRecentAnalysisRuns,
   markAnalysisRunProcessing,
-  saveAnalysisRun
+  markWebhookEventProcessed,
+  saveAnalysisRun,
+  saveProofCommentRecord,
+  saveWebhookEvent,
+  upsertGitHubInstallation,
+  upsertGitHubRepository
 } from "./persistence.js";
 export type {
   AnalysisHistoryItem,
@@ -15,6 +20,9 @@ export type {
   CompleteAnalysisRunInput,
   CreateQueuedAnalysisRunInput,
   SaveAnalysisRunInput,
-  SavedAnalysisRun
+  SaveWebhookEventInput,
+  SavedAnalysisRun,
+  UpsertGitHubInstallationInput,
+  UpsertGitHubRepositoryInput
 } from "./persistence.js";
 export * from "./schema.js";
