@@ -17,6 +17,11 @@ BitSpam is built for the hackathon prompt: solve open-source contribution spam
 while still welcoming contributors who are willing to show intent, test
 evidence, and proof of work.
 
+## GitHub App Availability
+
+BitSpam is registered as a public GitHub App so repository owners can
+install it on repositories they control.
+
 ## Logo
 
 Primary mark:
@@ -152,4 +157,3 @@ The current `.env.example` has the expected production variable names.
 - Neon connection strings: https://neon.com/docs/connect/connect-from-any-app
 - GitHub App registration: https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app
 - Gemini API keys: https://ai.google.dev/gemini-api/docs/api-key
-

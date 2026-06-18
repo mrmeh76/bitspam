@@ -664,7 +664,7 @@ function ChangedFiles({ pullRequest }: { pullRequest: PullRequestSummary }) {
           <TableBody>
             {pullRequest.changedFiles.slice(0, 40).map((file) => (
               <TableRow key={file.filename}>
-                <TableCell className="max-w-[520px] whitespace-normal break-all font-mono text-xs">
+                <TableCell className="max-w-130 whitespace-normal break-all font-mono text-xs">
                   {file.filename}
                 </TableCell>
                 <TableCell>{file.status}</TableCell>
