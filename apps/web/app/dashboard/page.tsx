@@ -343,7 +343,7 @@ function RecentAnalysis({ items }: { items: AnalysisHistoryItem[] }) {
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="max-w-[460px] whitespace-normal">
+                  <TableCell className="max-w-115 whitespace-normal">
                     <Link
                       className="font-medium hover:underline"
                       href={`/dashboard/repos/${item.repository.owner}/${item.repository.name}/pulls/${item.pullRequest.number}`}
