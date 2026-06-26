@@ -3,6 +3,7 @@
 import type { AnalysisResult, FindingCategory, Verdict } from "@bitspam/shared";
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   Copy,
   ExternalLink,
@@ -10,7 +11,8 @@ import {
   GitPullRequest,
   History,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  UserRound
 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
@@ -234,6 +236,10 @@ export default function AnalyzePage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button render={<Link href="/" />} size="sm" variant="outline">
+              <ArrowLeft />
+              Home
+            </Button>
             <Button render={<Link href="/history" />} size="sm" variant="outline">
               <History />
               History
@@ -537,10 +543,24 @@ function Recommendation({
   body: string;
   copyable?: boolean;
 }) {
+  const isContributor = title === "Contributor";
+  const palette = isContributor
+    ? "border-blue-200 bg-blue-50 text-blue-950"
+    : "border-red-200 bg-red-50 text-red-950";
+  const iconClassName = isContributor
+    ? "bg-blue-100 text-blue-700"
+    : "bg-red-100 text-red-700";
+  const Icon = isContributor ? UserRound : ShieldAlert;
+
   return (
-    <div className="space-y-2 rounded-lg border p-3">
+    <div className={`space-y-3 rounded-lg border p-3 ${palette}`}>
       <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-medium">{title}</div>
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <span className={`flex size-7 items-center justify-center rounded-md ${iconClassName}`}>
+            <Icon className="size-4" />
+          </span>
+          {title}
+        </div>
         {copyable ? (
           <Button
             aria-label="Copy suggested contributor comment"
@@ -553,7 +573,7 @@ function Recommendation({
           </Button>
         ) : null}
       </div>
-      <Textarea className="min-h-24 resize-none" readOnly value={body} />
+      <Textarea className="min-h-24 resize-none bg-white/80" readOnly value={body} />
     </div>
   );
 }

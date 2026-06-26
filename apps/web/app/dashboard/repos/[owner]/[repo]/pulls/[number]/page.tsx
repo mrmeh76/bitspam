@@ -190,8 +190,13 @@ function ScoreCard({ data }: { data: PullRequestDashboardData }) {
           <MiniMetric label="Saved" value={formatDate(detail.createdAt)} />
         </div>
         {detail.maintainerRecommendation ? (
-          <div className="rounded-lg border border-border bg-card p-3">
-            <div className="text-sm font-medium">Maintainer recommendation</div>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-950">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <span className="flex size-7 items-center justify-center rounded-md bg-red-100 text-red-700">
+                <ShieldAlert className="size-4" />
+              </span>
+              Maintainer recommendation
+            </div>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {detail.maintainerRecommendation}
             </p>
@@ -344,17 +349,22 @@ function RiskyFilesCard({ files }: { files: ChangedFile[] }) {
 
 function SuggestedCommentCard({ body }: { body: string }) {
   return (
-    <Card>
+    <Card className="border-blue-200 bg-blue-50 text-blue-950">
       <CardHeader>
         <CardTitle className="flex items-center justify-between gap-3">
-          <span>Suggested comment</span>
+          <span className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-md bg-blue-100 text-blue-700">
+              <UserRound className="size-4" />
+            </span>
+            Suggested comment
+          </span>
           {body ? <CopyButton text={body} /> : null}
         </CardTitle>
         <CardDescription>Copyable contributor response.</CardDescription>
       </CardHeader>
       <CardContent>
         {body ? (
-          <Textarea className="min-h-40 resize-none" readOnly value={body} />
+          <Textarea className="min-h-40 resize-none bg-white/80" readOnly value={body} />
         ) : (
           <EmptyBlock>No suggested contributor comment was saved.</EmptyBlock>
         )}

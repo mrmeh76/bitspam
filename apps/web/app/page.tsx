@@ -7,6 +7,7 @@ import {
   PlugZap,
   ShieldCheck
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -49,9 +50,7 @@ export default function Home() {
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
           <Link className="flex items-center gap-3" href="/">
-            <span className="flex size-9 items-center justify-center rounded-full bg-foreground text-background">
-              <ShieldCheck className="size-5" />
-            </span>
+            <Image alt="" className="size-9 rounded-xl" height={36} src="/bitspam-mark.svg" width={36} />
             <span className="text-lg font-semibold">BitSpam</span>
           </Link>
           <nav className="flex flex-wrap items-center justify-end gap-2">

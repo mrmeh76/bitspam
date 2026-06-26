@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, GitPullRequest, History } from "lucide-react";
+import { ArrowLeft, ExternalLink, GitPullRequest, History, ShieldAlert, UserRound } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -151,10 +151,24 @@ function Fact({ label, value }: { label: string; value: number }) {
 }
 
 function Recommendation({ title, body }: { title: string; body: string }) {
+  const isContributor = title === "Contributor";
+  const palette = isContributor
+    ? "border-blue-200 bg-blue-50 text-blue-950"
+    : "border-red-200 bg-red-50 text-red-950";
+  const iconClassName = isContributor
+    ? "bg-blue-100 text-blue-700"
+    : "bg-red-100 text-red-700";
+  const Icon = isContributor ? UserRound : ShieldAlert;
+
   return (
-    <div className="space-y-2 rounded-lg border p-3">
-      <div className="text-sm font-medium">{title}</div>
-      <Textarea className="min-h-24 resize-none" readOnly value={body} />
+    <div className={`space-y-3 rounded-lg border p-3 ${palette}`}>
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <span className={`flex size-7 items-center justify-center rounded-md ${iconClassName}`}>
+          <Icon className="size-4" />
+        </span>
+        {title}
+      </div>
+      <Textarea className="min-h-24 resize-none bg-white/80" readOnly value={body} />
     </div>
   );
 }

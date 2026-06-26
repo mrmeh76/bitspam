@@ -46,10 +46,16 @@ export default async function HistoryPage() {
               Review saved verdicts, findings, and maintainer recommendations.
             </p>
           </div>
-          <Button render={<Link href="/analyze" />} size="sm" variant="outline">
-            <ArrowLeft />
-            Analyze
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button render={<Link href="/" />} size="sm" variant="outline">
+              <ArrowLeft />
+              Home
+            </Button>
+            <Button render={<Link href="/analyze" />} size="sm" variant="outline">
+              <GitPullRequest />
+              Analyze
+            </Button>
+          </div>
         </header>
 
         {"error" in history ? (

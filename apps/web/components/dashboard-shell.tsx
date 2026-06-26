@@ -5,9 +5,9 @@ import {
   LogOut,
   PlugZap,
   Search,
-  ShieldCheck,
   UserRound
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -32,9 +32,7 @@ export function DashboardShell({
       <div className="grid min-h-dvh lg:grid-cols-[260px_1fr]">
         <aside className="border-b border-border bg-sidebar px-4 py-4 lg:border-b-0 lg:border-r">
           <div className="flex items-center gap-2 px-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-background">
-              <ShieldCheck className="size-4" />
-            </span>
+            <Image alt="" className="size-8 rounded-lg" height={32} src="/bitspam-mark.svg" width={32} />
             <div>
               <div className="text-sm font-semibold">BitSpam</div>
               <div className="text-xs text-muted-foreground">Maintainer console</div>

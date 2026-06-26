@@ -15,6 +15,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BitSpam",
   description: "Maintainer triage for noisy pull requests.",
+  icons: {
+    icon: [
+      { url: "/bitspam-mark.svg", type: "image/svg+xml" }
+    ],
+    shortcut: "/bitspam-mark.svg",
+    apple: "/bitspam-mark.svg"
+  }
 };
 
 export default function RootLayout({
