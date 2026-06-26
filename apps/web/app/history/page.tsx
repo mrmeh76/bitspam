@@ -33,15 +33,18 @@ export default async function HistoryPage() {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <header className="flex flex-col gap-3 border-b border-border bg-card px-4 py-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <History className="size-4 text-foreground" />
-              BitSpam
+              Saved reports
             </div>
-            <h1 className="text-2xl font-semibold tracking-normal sm:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-[-0.01em] sm:text-3xl">
               Analysis history
             </h1>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Review saved verdicts, findings, and maintainer recommendations.
+            </p>
           </div>
           <Button render={<Link href="/analyze" />} size="sm" variant="outline">
             <ArrowLeft />

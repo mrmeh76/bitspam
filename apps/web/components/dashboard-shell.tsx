@@ -32,7 +32,7 @@ export function DashboardShell({
       <div className="grid min-h-dvh lg:grid-cols-[260px_1fr]">
         <aside className="border-b border-border bg-sidebar px-4 py-4 lg:border-b-0 lg:border-r">
           <div className="flex items-center gap-2 px-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-accent text-accent-foreground">
+            <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-background">
               <ShieldCheck className="size-4" />
             </span>
             <div>
@@ -50,7 +50,7 @@ export function DashboardShell({
             <NavLink href="/history" icon={<History />}>History</NavLink>
           </nav>
 
-          <div className="mt-6 rounded-lg border border-border bg-card p-3">
+          <div className="mt-6 rounded-lg border border-border bg-card p-3 shadow-sm">
             <div className="flex items-center gap-2">
               {session.user.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -79,14 +79,14 @@ export function DashboardShell({
         </aside>
 
         <section className="min-w-0">
-          <header className="border-b border-border bg-background/95 px-4 py-5 sm:px-6 lg:px-8">
+          <header className="border-b border-border bg-card px-4 py-5 sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="mb-2 flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <GitPullRequest className="size-4" />
                   Production PR triage
                 </div>
-                <h1 className="text-2xl font-semibold tracking-normal sm:text-3xl">{title}</h1>
+                <h1 className="text-2xl font-semibold tracking-[-0.01em] sm:text-3xl">{title}</h1>
                 <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{subtitle}</p>
               </div>
               <div className="flex gap-2">
@@ -121,7 +121,7 @@ function NavLink({
 }) {
   return (
     <Link
-      className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       href={href}
     >
       <span className="[&_svg]:size-4">{icon}</span>

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "BitSpam",
-  description: "Maintainer attention firewall for public GitHub pull requests.",
+  description: "Maintainer triage for noisy pull requests.",
 };
 
 export default function RootLayout({

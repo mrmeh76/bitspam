@@ -186,10 +186,10 @@ function PullRequestQueue({ items }: { items: AnalysisHistoryItem[] }) {
         {items.length === 0 ? (
           <EmptyState actionHref="/analyze" actionLabel="Analyze a PR" />
         ) : (
-          <div className="bitspam-scrollbar grid max-h-[360px] gap-2 overflow-y-auto pr-1.5">
+          <div className="bitspam-scrollbar grid max-h-90 gap-2 overflow-y-auto pr-1.5">
             {items.map((item) => (
               <Link
-                className="grid gap-3 rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60 sm:grid-cols-[1fr_150px]"
+                className="grid gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted sm:grid-cols-[1fr_150px]"
                 href={`/dashboard/repos/${item.repository.owner}/${item.repository.name}/pulls/${item.pullRequest.number}`}
                 key={item.id}
               >

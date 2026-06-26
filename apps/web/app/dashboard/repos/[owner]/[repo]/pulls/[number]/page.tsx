@@ -190,7 +190,7 @@ function ScoreCard({ data }: { data: PullRequestDashboardData }) {
           <MiniMetric label="Saved" value={formatDate(detail.createdAt)} />
         </div>
         {detail.maintainerRecommendation ? (
-          <div className="rounded-lg border border-border bg-background/35 p-3">
+          <div className="rounded-lg border border-border bg-card p-3">
             <div className="text-sm font-medium">Maintainer recommendation</div>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {detail.maintainerRecommendation}
@@ -216,7 +216,7 @@ function ScoreBreakdown({ data }: { data: PullRequestDashboardData }) {
   return (
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {visibleCategories.map((category) => (
-        <div className="rounded-lg border border-border bg-background/35 p-3" key={category}>
+        <div className="rounded-lg border border-border bg-card p-3" key={category}>
           <div className="text-xs text-muted-foreground">{categoryLabel(category)}</div>
           <div className="text-lg font-semibold tabular-nums">-{breakdown[category]}</div>
         </div>
@@ -257,7 +257,7 @@ function FindingsCard({ data }: { data: PullRequestDashboardData }) {
               <div className="text-sm font-medium">{categoryLabel(category as FindingCategory)}</div>
               <div className="grid gap-2">
                 {findings.map((finding) => (
-                  <div className="rounded-lg border border-border bg-background/35 p-3" key={finding.id}>
+                  <div className="rounded-lg border border-border bg-card p-3" key={finding.id}>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge>
                       <span className="font-medium">{finding.title}</span>
@@ -328,7 +328,7 @@ function RiskyFilesCard({ files }: { files: ChangedFile[] }) {
           <EmptyBlock>No risky files detected from saved context.</EmptyBlock>
         ) : (
           files.map((file) => (
-            <div className="rounded-lg border border-border bg-background/35 p-3" key={file.filename}>
+            <div className="rounded-lg border border-border bg-card p-3" key={file.filename}>
               <div className="break-all font-mono text-xs">{file.filename}</div>
               <div className="mt-2 text-sm tabular-nums text-muted-foreground">
                 +{file.additions.toLocaleString()} / -{file.deletions.toLocaleString()} /{" "}
@@ -384,7 +384,7 @@ function RunHistoryCard({
       <CardContent className="grid gap-2">
         {items.map((item) => (
           <Link
-            className="rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
+            className="rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted"
             href={`/dashboard/repos/${owner}/${repo}/pulls/${item.pullRequest.number}`}
             key={item.id}
           >
@@ -454,7 +454,7 @@ function ChangedFilesCard({ files }: { files: ChangedFile[] }) {
 
 function MiniMetric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-lg border border-border bg-background/35 p-3">
+    <div className="rounded-lg border border-border bg-card p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
     </div>
@@ -525,3 +525,4 @@ function categoryLabel(category: FindingCategory): string {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
+

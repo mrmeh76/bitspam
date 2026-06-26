@@ -220,15 +220,18 @@ export default function AnalyzePage() {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <header className="flex flex-col gap-3 border-b border-border bg-card px-4 py-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <GitPullRequest className="size-4 text-foreground" />
-              BitSpam
+              Public PR analysis
             </div>
-            <h1 className="text-2xl font-semibold tracking-normal sm:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-[-0.01em] sm:text-3xl">
               Pull request analysis
             </h1>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Paste a public GitHub pull request URL and get a maintainer-ready report.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button render={<Link href="/history" />} size="sm" variant="outline">
@@ -371,7 +374,7 @@ function InlineReportProgress() {
 
 function LoadingStep({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
       <span className="relative flex size-2.5">
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
         <span className="relative inline-flex size-2.5 rounded-full bg-primary" />

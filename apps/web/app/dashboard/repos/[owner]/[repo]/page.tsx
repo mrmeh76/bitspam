@@ -226,7 +226,7 @@ function RepoSummary({ data }: { data: RepositoryDashboardData }) {
           <MiniMetric label="Runs" value={data.repository.runs} />
           <MiniMetric label="PRs" value={data.repository.pullRequests} />
         </div>
-        <div className="rounded-lg border border-border bg-background/35 p-3">
+        <div className="rounded-lg border border-border bg-card p-3">
           <div className="text-sm font-medium">Latest run</div>
           {latest ? (
             <div className="mt-1 text-sm text-muted-foreground">
@@ -277,7 +277,7 @@ function HistoryTable({
         <div className="grid gap-2">
           {items.slice(0, 12).map((item) => (
             <Link
-              className="grid gap-2 rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60 sm:grid-cols-[1fr_140px_96px]"
+              className="grid gap-2 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted sm:grid-cols-[1fr_140px_96px]"
               href={`/dashboard/repos/${owner}/${repo}/pulls/${item.pullRequest.number}`}
               key={item.id}
             >
@@ -307,7 +307,7 @@ function HistoryTable({
 
 function MiniMetric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-lg border border-border bg-background/35 p-3">
+    <div className="rounded-lg border border-border bg-card p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="text-lg font-semibold tabular-nums">{value}</div>
     </div>
@@ -359,3 +359,4 @@ function statusVariant(status: AnalysisHistoryItem["status"]): "default" | "seco
 
   return "outline";
 }
+

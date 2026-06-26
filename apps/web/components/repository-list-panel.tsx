@@ -99,7 +99,7 @@ function RepositoryViewMenu({
   return (
     <div className="relative" ref={menuRef}>
       <button
-        className="inline-flex h-7 items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium transition-colors hover:bg-muted"
+        className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-border bg-card px-2.5 text-[0.8rem] font-medium shadow-sm transition-colors hover:bg-muted"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
@@ -195,7 +195,7 @@ function RepositoryCard({ repository }: { repository: DashboardRepository }) {
   if (!hasAnalysis) {
     return (
       <a
-        className="block rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
+        className="block rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted"
         href={`https://github.com/${repository.fullName}`}
         rel="noreferrer"
         target="_blank"
@@ -207,7 +207,7 @@ function RepositoryCard({ repository }: { repository: DashboardRepository }) {
 
   return (
     <Link
-      className="rounded-lg border border-border bg-background/35 p-3 transition-colors hover:bg-muted/60"
+      className="rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted"
       href={`/dashboard/repos/${repository.owner}/${repository.repo}`}
     >
       {content}
@@ -229,7 +229,7 @@ function EmptyRepositoryState() {
 
 function MiniMetric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-md bg-muted/60 px-2 py-1">
+    <div className="rounded-md border border-border bg-muted/50 px-2 py-1">
       <div>{label}</div>
       <div className="font-semibold tabular-nums text-foreground">{value}</div>
     </div>
