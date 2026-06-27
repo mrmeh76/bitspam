@@ -69,7 +69,7 @@ export default function Home() {
 
       <section className="border-b border-border bg-card">
         <div className="mx-auto grid max-w-[1600px] border-x border-border lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.58fr)]">
-          <div className="flex min-h-[520px] items-center px-6 py-16 sm:px-10 lg:px-20">
+          <div className="flex min-h-130 items-center px-6 py-16 sm:px-10 lg:px-20">
             <div className="max-w-4xl">
               <div className="mb-8 flex items-center gap-2 font-mono text-sm font-medium uppercase tracking-wide text-muted-foreground">
                 Maintainer triage
